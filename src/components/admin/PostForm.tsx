@@ -29,9 +29,11 @@ export default function PostForm() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [selectingImageFor, setSelectingImageFor] = useState<'main' | number | null>(null);
+  const [postLoaded, setPostLoaded] = useState(false);
 
+  // Load post data for editing - only run once when component mounts and data is available
   useEffect(() => {
-    if (isEditing && id && !loading) {
+    if (isEditing && id && !loading && !postLoaded) {
       console.log('Loading post for editing, ID:', id);
       const post = getBlogPost(id);
       if (post) {
@@ -44,12 +46,13 @@ export default function PostForm() {
           excerpt: post.excerpt,
           content: post.content
         });
+        setPostLoaded(true);
       } else {
         console.warn('Post not found for ID:', id);
         setSaveError('Post not found');
       }
     }
-  }, [id, isEditing, getBlogPost, loading]);
+  }, [id, isEditing, getBlogPost, loading, postLoaded]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BlogPost, BlogFormData } from '../types/BlogPost';
 import { blogService } from '../services/blogService';
 
@@ -12,7 +12,7 @@ export function useBlogPosts() {
     loadBlogPosts();
   }, []);
 
-  const loadBlogPosts = async () => {
+  const loadBlogPosts = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -30,9 +30,9 @@ export function useBlogPosts() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const addBlogPost = async (postData: BlogFormData): Promise<BlogPost> => {
+  const addBlogPost = useCallback(async (postData: BlogFormData): Promise<BlogPost> => {
     try {
       console.log('Creating new blog post:', postData.title);
       setError(null);
@@ -50,9 +50,9 @@ export function useBlogPosts() {
       setError(errorMessage);
       throw err;
     }
-  };
+  }, []);
 
-  const updateBlogPost = async (id: string, postData: BlogFormData): Promise<void> => {
+  const updateBlogPost = useCallback(async (id: string, postData: BlogFormData): Promise<void> => {
     try {
       console.log('Updating blog post with ID:', id);
       setError(null);
@@ -70,9 +70,9 @@ export function useBlogPosts() {
       setError(errorMessage);
       throw err;
     }
-  };
+  }, []);
 
-  const deleteBlogPost = async (id: string): Promise<void> => {
+  const deleteBlogPost = useCallback(async (id: string): Promise<void> => {
     try {
       console.log('Deleting blog post with ID:', id);
       setError(null);
@@ -88,17 +88,18 @@ export function useBlogPosts() {
       setError(errorMessage);
       throw err;
     }
-  };
+  }, []);
 
-  const getBlogPost = (id: string): BlogPost | undefined => {
+  // Memoize getBlogPost to prevent unnecessary re-renders
+  const getBlogPost = useCallback((id: string): BlogPost | undefined => {
     const post = blogPosts.find(post => post.id === id);
     console.log('Getting blog post with ID:', id, 'found:', !!post);
     return post;
-  };
+  }, [blogPosts]);
 
-  const refreshPosts = () => {
+  const refreshPosts = useCallback(() => {
     loadBlogPosts();
-  };
+  }, [loadBlogPosts]);
 
   return {
     blogPosts,
