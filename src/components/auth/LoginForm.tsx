@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Camera, Lock, Mail, AlertCircle, Loader } from 'lucide-react';
+import { Lock, Mail, AlertCircle, Loader } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function LoginForm() {
@@ -36,9 +36,6 @@ export default function LoginForm() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <Camera className="w-12 h-12 text-blue-600" />
-            </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Login</h1>
             <p className="text-gray-600">Sign in to manage your blog</p>
           </div>

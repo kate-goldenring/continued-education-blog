@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
 import { Category } from '../types/BlogPost';
 import FilterBar from './FilterBar';
@@ -26,7 +26,6 @@ export default function Gallery() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <Camera className="w-8 h-8 text-blue-600 mr-3" />
               <h1 className="text-4xl font-bold text-gray-900">Visual Stories</h1>
               <button
                 onClick={() => navigate('/admin')}
