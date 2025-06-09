@@ -26,18 +26,7 @@ export function useBlogPosts() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load blog posts';
       console.error('Error loading blog posts:', errorMessage);
       setError(errorMessage);
-      
-      // Fallback to localStorage if Supabase fails
-      try {
-        const saved = localStorage.getItem('blogPosts');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          console.log('Fallback: Loaded blog posts from localStorage:', parsed.length, 'posts');
-          setBlogPosts(parsed);
-        }
-      } catch (localError) {
-        console.error('Error loading from localStorage fallback:', localError);
-      }
+      setBlogPosts([]); // Clear posts on error
     } finally {
       setLoading(false);
     }
