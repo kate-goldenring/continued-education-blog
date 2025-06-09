@@ -1,101 +1,124 @@
 import { useState, useEffect } from 'react';
-import { BlogPost } from '../types/BlogPost';
-import { blogPosts as initialBlogPosts } from '../data/blogPosts';
+import { BlogPost, BlogFormData } from '../types/BlogPost';
+import { blogService } from '../services/blogService';
 
 export function useBlogPosts() {
-  const [blogPosts, setBlogPosts] = useState<BlogPost[]>(() => {
-    try {
-      const saved = localStorage.getItem('blogPosts');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        console.log('Loaded blog posts from localStorage:', parsed.length, 'posts');
-        return parsed;
-      }
-    } catch (error) {
-      console.error('Error loading blog posts from localStorage:', error);
-    }
-    console.log('Using initial blog posts:', initialBlogPosts.length, 'posts');
-    return initialBlogPosts;
-  });
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  // Load blog posts from Supabase on mount
   useEffect(() => {
+    loadBlogPosts();
+  }, []);
+
+  const loadBlogPosts = async () => {
     try {
-      console.log('Saving blog posts to localStorage:', blogPosts.length, 'posts');
-      localStorage.setItem('blogPosts', JSON.stringify(blogPosts));
-    } catch (error) {
-      console.error('Error saving blog posts to localStorage:', error);
+      setLoading(true);
+      setError(null);
+      console.log('Loading blog posts from Supabase...');
+      
+      const posts = await blogService.getAllPosts();
+      console.log('Loaded blog posts from Supabase:', posts.length, 'posts');
+      
+      setBlogPosts(posts);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load blog posts';
+      console.error('Error loading blog posts:', errorMessage);
+      setError(errorMessage);
+      
+      // Fallback to localStorage if Supabase fails
+      try {
+        const saved = localStorage.getItem('blogPosts');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          console.log('Fallback: Loaded blog posts from localStorage:', parsed.length, 'posts');
+          setBlogPosts(parsed);
+        }
+      } catch (localError) {
+        console.error('Error loading from localStorage fallback:', localError);
+      }
+    } finally {
+      setLoading(false);
     }
-  }, [blogPosts]);
-
-  const addBlogPost = (postData: Omit<BlogPost, 'id' | 'date' | 'readTime'>) => {
-    console.log('Adding new blog post:', postData.title);
-    
-    const newPost: BlogPost = {
-      ...postData,
-      id: Date.now().toString(),
-      date: new Date().toISOString().split('T')[0],
-      readTime: calculateReadTime(postData.content),
-      images: postData.images || []
-    };
-    
-    console.log('Created new post with ID:', newPost.id);
-    
-    setBlogPosts(prev => {
-      const updated = [newPost, ...prev];
-      console.log('Updated blog posts array, new length:', updated.length);
-      return updated;
-    });
-    
-    return newPost;
   };
 
-  const updateBlogPost = (id: string, postData: Omit<BlogPost, 'id' | 'date' | 'readTime'>) => {
-    console.log('Updating blog post with ID:', id);
-    
-    setBlogPosts(prev => {
-      const updated = prev.map(post => 
-        post.id === id 
-          ? { 
-              ...postData, 
-              id, 
-              date: post.date, 
-              readTime: calculateReadTime(postData.content),
-              images: postData.images || []
-            }
-          : post
-      );
-      console.log('Updated blog posts array after edit, length:', updated.length);
-      return updated;
-    });
+  const addBlogPost = async (postData: BlogFormData): Promise<BlogPost> => {
+    try {
+      console.log('Creating new blog post:', postData.title);
+      setError(null);
+      
+      const newPost = await blogService.createPost(postData);
+      console.log('Created new post with ID:', newPost.id);
+      
+      // Update local state
+      setBlogPosts(prev => [newPost, ...prev]);
+      
+      return newPost;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create blog post';
+      console.error('Error creating blog post:', errorMessage);
+      setError(errorMessage);
+      throw err;
+    }
   };
 
-  const deleteBlogPost = (id: string) => {
-    console.log('Deleting blog post with ID:', id);
-    setBlogPosts(prev => {
-      const updated = prev.filter(post => post.id !== id);
-      console.log('Updated blog posts array after delete, length:', updated.length);
-      return updated;
-    });
+  const updateBlogPost = async (id: string, postData: BlogFormData): Promise<void> => {
+    try {
+      console.log('Updating blog post with ID:', id);
+      setError(null);
+      
+      const updatedPost = await blogService.updatePost(id, postData);
+      console.log('Updated blog post successfully');
+      
+      // Update local state
+      setBlogPosts(prev => prev.map(post => 
+        post.id === id ? updatedPost : post
+      ));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update blog post';
+      console.error('Error updating blog post:', errorMessage);
+      setError(errorMessage);
+      throw err;
+    }
   };
 
-  const getBlogPost = (id: string) => {
+  const deleteBlogPost = async (id: string): Promise<void> => {
+    try {
+      console.log('Deleting blog post with ID:', id);
+      setError(null);
+      
+      await blogService.deletePost(id);
+      console.log('Deleted blog post successfully');
+      
+      // Update local state
+      setBlogPosts(prev => prev.filter(post => post.id !== id));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete blog post';
+      console.error('Error deleting blog post:', errorMessage);
+      setError(errorMessage);
+      throw err;
+    }
+  };
+
+  const getBlogPost = (id: string): BlogPost | undefined => {
     const post = blogPosts.find(post => post.id === id);
     console.log('Getting blog post with ID:', id, 'found:', !!post);
     return post;
   };
 
+  const refreshPosts = () => {
+    loadBlogPosts();
+  };
+
   return {
     blogPosts,
+    loading,
+    error,
     addBlogPost,
     updateBlogPost,
     deleteBlogPost,
-    getBlogPost
+    getBlogPost,
+    refreshPosts
   };
-}
-
-function calculateReadTime(content: string): string {
-  const wordsPerMinute = 200;
-  const words = content.split(/\s+/).length;
-  const minutes = Math.ceil(words / wordsPerMinute);
-  return `${minutes} min read`;
 }

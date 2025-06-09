@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, X, Eye, Plus, Trash2, Image as ImageIcon, Upload } from 'lucide-react';
+import { Save, X, Eye, Plus, Trash2, Image as ImageIcon, Upload, AlertCircle } from 'lucide-react';
 import { useBlogPosts } from '../../hooks/useBlogPosts';
 import { BlogFormData } from '../../types/BlogPost';
 import ImageUpload from './ImageUpload';
@@ -10,7 +10,7 @@ import { ImageUploadResult } from '../../services/imageService';
 export default function PostForm() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { addBlogPost, updateBlogPost, getBlogPost } = useBlogPosts();
+  const { addBlogPost, updateBlogPost, getBlogPost, loading, error: hookError } = useBlogPosts();
   const isEditing = Boolean(id);
 
   const [formData, setFormData] = useState<BlogFormData>({
@@ -27,11 +27,11 @@ export default function PostForm() {
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [selectingImageFor, setSelectingImageFor] = useState<'main' | number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [selectingImageFor, setSelectingImageFor] = useState<'main' | number | null>(null);
 
   useEffect(() => {
-    if (isEditing && id) {
+    if (isEditing && id && !loading) {
       console.log('Loading post for editing, ID:', id);
       const post = getBlogPost(id);
       if (post) {
@@ -49,7 +49,7 @@ export default function PostForm() {
         setSaveError('Post not found');
       }
     }
-  }, [id, isEditing, getBlogPost]);
+  }, [id, isEditing, getBlogPost, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,19 +79,16 @@ export default function PostForm() {
     try {
       if (isEditing && id) {
         console.log('Updating existing post with ID:', id);
-        updateBlogPost(id, formData);
+        await updateBlogPost(id, formData);
         console.log('Post updated successfully');
       } else {
         console.log('Creating new post');
-        const newPost = addBlogPost(formData);
+        const newPost = await addBlogPost(formData);
         console.log('New post created with ID:', newPost.id);
       }
       
-      // Small delay to ensure localStorage is updated
-      setTimeout(() => {
-        console.log('Navigating to admin panel');
-        navigate('/admin');
-      }, 100);
+      console.log('Navigating to admin panel');
+      navigate('/admin');
     } catch (error) {
       console.error('Error saving post:', error);
       setSaveError(error instanceof Error ? error.message : 'Failed to save post');
@@ -197,6 +194,17 @@ export default function PostForm() {
     });
   };
 
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+          <span className="text-gray-600">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Header */}
@@ -228,9 +236,19 @@ export default function PostForm() {
 
       <div className="p-6">
         {/* Error Messages */}
-        {saveError && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-700 text-sm font-medium">Error: {saveError}</p>
+        {(saveError || hookError) && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
+            <AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-red-700 text-sm font-medium">
+                {saveError || hookError}
+              </p>
+              {hookError && (
+                <p className="text-red-600 text-xs mt-1">
+                  Check your internet connection and Supabase configuration.
+                </p>
+              )}
+            </div>
           </div>
         )}
 
@@ -477,7 +495,7 @@ export default function PostForm() {
             <div className="flex justify-end pt-6 border-t border-gray-200">
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || loading}
                 className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 <Save className="w-4 h-4 mr-2" />

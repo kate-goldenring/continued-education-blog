@@ -1,21 +1,29 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Edit, Trash2, Eye, Plus } from 'lucide-react';
+import { Edit, Trash2, Eye, Plus, AlertCircle, RefreshCw } from 'lucide-react';
 import { useBlogPosts } from '../../hooks/useBlogPosts';
 import { Category } from '../../types/BlogPost';
 
 export default function PostList() {
-  const { blogPosts, deleteBlogPost } = useBlogPosts();
+  const { blogPosts, deleteBlogPost, loading, error, refreshPosts } = useBlogPosts();
   const [filter, setFilter] = useState<Category>('all');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const filteredPosts = filter === 'all' 
     ? blogPosts 
     : blogPosts.filter(post => post.category === filter);
 
-  const handleDelete = (id: string) => {
-    deleteBlogPost(id);
-    setShowDeleteConfirm(null);
+  const handleDelete = async (id: string) => {
+    try {
+      setDeleting(id);
+      await deleteBlogPost(id);
+      setShowDeleteConfirm(null);
+    } catch (error) {
+      console.error('Failed to delete post:', error);
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const categories: { key: Category; label: string }[] = [
@@ -27,20 +35,54 @@ export default function PostList() {
     { key: 'lifestyle', label: 'Lifestyle' }
   ];
 
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+          <span className="text-gray-600">Loading blog posts...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900">Blog Posts</h2>
-          <Link
-            to="/admin/new"
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors duration-200"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Post
-          </Link>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={refreshPosts}
+              disabled={loading}
+              className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors duration-200"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+            <Link
+              to="/admin/new"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors duration-200"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Post
+            </Link>
+          </div>
         </div>
+        
+        {/* Error Message */}
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start">
+            <AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-red-700 text-sm font-medium">{error}</p>
+              <p className="text-red-600 text-xs mt-1">
+                Check your internet connection and Supabase configuration.
+              </p>
+            </div>
+          </div>
+        )}
         
         {/* Filter Bar */}
         <div className="mt-4 flex flex-wrap gap-2">
@@ -64,7 +106,18 @@ export default function PostList() {
       <div className="divide-y divide-gray-200">
         {filteredPosts.length === 0 ? (
           <div className="px-6 py-12 text-center">
-            <p className="text-gray-500">No posts found.</p>
+            <p className="text-gray-500">
+              {error ? 'Unable to load posts.' : 'No posts found.'}
+            </p>
+            {!error && (
+              <Link
+                to="/admin/new"
+                className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors duration-200"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Your First Post
+              </Link>
+            )}
           </div>
         ) : (
           filteredPosts.map((post) => (
@@ -107,7 +160,8 @@ export default function PostList() {
                   </Link>
                   <button
                     onClick={() => setShowDeleteConfirm(post.id)}
-                    className="p-2 text-gray-400 hover:text-red-600 transition-colors duration-200"
+                    disabled={deleting === post.id}
+                    className="p-2 text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors duration-200"
                     title="Delete Post"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -130,15 +184,24 @@ export default function PostList() {
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                disabled={deleting === showDeleteConfirm}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 disabled:opacity-50 transition-colors duration-200"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleDelete(showDeleteConfirm)}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors duration-200"
+                disabled={deleting === showDeleteConfirm}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 transition-colors duration-200 flex items-center"
               >
-                Delete
+                {deleting === showDeleteConfirm ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
               </button>
             </div>
           </div>
