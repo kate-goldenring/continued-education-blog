@@ -101,12 +101,15 @@ export default function PostForm() {
   };
 
   const addImage = () => {
-    if (formData.images.length < 10) {
-      setFormData(prev => ({
+    console.log('Adding image, current images:', formData.images.length);
+    setFormData(prev => {
+      const newImages = [...prev.images, ''];
+      console.log('New images array:', newImages);
+      return {
         ...prev,
-        images: [...prev.images, '']
-      }));
-    }
+        images: newImages
+      };
+    });
   };
 
   const updateImage = (index: number, url: string) => {
@@ -340,7 +343,7 @@ export default function PostForm() {
                     className="inline-flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
                   >
                     <Plus className="w-4 h-4 mr-1" />
-                    Add Image
+                    Add Image ({formData.images.length}/10)
                   </button>
                 </div>
                 
