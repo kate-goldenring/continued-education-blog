@@ -28,11 +28,14 @@ export default function PostForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectingImageFor, setSelectingImageFor] = useState<'main' | number | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isEditing && id) {
+      console.log('Loading post for editing, ID:', id);
       const post = getBlogPost(id);
       if (post) {
+        console.log('Found post:', post.title);
         setFormData({
           title: post.title,
           category: post.category,
@@ -41,23 +44,57 @@ export default function PostForm() {
           excerpt: post.excerpt,
           content: post.content
         });
+      } else {
+        console.warn('Post not found for ID:', id);
+        setSaveError('Post not found');
       }
     }
   }, [id, isEditing, getBlogPost]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted, isEditing:', isEditing, 'formData:', formData);
+    
+    // Validate required fields
+    if (!formData.title.trim()) {
+      setSaveError('Title is required');
+      return;
+    }
+    if (!formData.excerpt.trim()) {
+      setSaveError('Excerpt is required');
+      return;
+    }
+    if (!formData.content.trim()) {
+      setSaveError('Content is required');
+      return;
+    }
+    if (!formData.imageUrl.trim()) {
+      setSaveError('Main image URL is required');
+      return;
+    }
+
     setIsSaving(true);
+    setSaveError(null);
 
     try {
       if (isEditing && id) {
+        console.log('Updating existing post with ID:', id);
         updateBlogPost(id, formData);
+        console.log('Post updated successfully');
       } else {
-        addBlogPost(formData);
+        console.log('Creating new post');
+        const newPost = addBlogPost(formData);
+        console.log('New post created with ID:', newPost.id);
       }
-      navigate('/admin');
+      
+      // Small delay to ensure localStorage is updated
+      setTimeout(() => {
+        console.log('Navigating to admin panel');
+        navigate('/admin');
+      }, 100);
     } catch (error) {
       console.error('Error saving post:', error);
+      setSaveError(error instanceof Error ? error.message : 'Failed to save post');
     } finally {
       setIsSaving(false);
     }
@@ -66,6 +103,8 @@ export default function PostForm() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear save error when user starts typing
+    if (saveError) setSaveError(null);
   };
 
   const handleImageUploaded = (result: ImageUploadResult) => {
@@ -104,7 +143,7 @@ export default function PostForm() {
     console.log('Adding image, current images:', formData.images.length);
     setFormData(prev => {
       const newImages = [...prev.images, ''];
-      console.log('New images array:', newImages);
+      console.log('New images array length:', newImages.length);
       return {
         ...prev,
         images: newImages
@@ -188,6 +227,13 @@ export default function PostForm() {
       </div>
 
       <div className="p-6">
+        {/* Error Messages */}
+        {saveError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 text-sm font-medium">Error: {saveError}</p>
+          </div>
+        )}
+
         {showPreview ? (
           /* Preview Mode */
           <div className="max-w-4xl">
@@ -234,7 +280,7 @@ export default function PostForm() {
               {/* Title */}
               <div className="lg:col-span-2">
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                  Title
+                  Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -271,7 +317,7 @@ export default function PostForm() {
               {/* Main Image URL */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Main Image (Gallery Thumbnail)
+                  Main Image (Gallery Thumbnail) <span className="text-red-500">*</span>
                 </label>
                 <div className="space-y-3">
                   <div className="flex space-x-2">
@@ -316,7 +362,7 @@ export default function PostForm() {
               {/* Excerpt */}
               <div className="lg:col-span-2">
                 <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700 mb-2">
-                  Excerpt
+                  Excerpt <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   id="excerpt"
@@ -409,7 +455,7 @@ export default function PostForm() {
               {/* Content */}
               <div className="lg:col-span-2">
                 <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-                  Content
+                  Content <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   id="content"
