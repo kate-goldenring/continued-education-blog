@@ -40,23 +40,29 @@ class ImageService {
    */
   private async convertHeicToJpeg(file: File): Promise<File> {
     try {
+      // Use more specific configuration for heic2any
       const convertedBlob = await heic2any({
         blob: file,
         toType: 'image/jpeg',
-        quality: 0.9
-      }) as Blob;
+        quality: 0.9,
+        multiple: false
+      });
+
+      // Handle the result which might be an array or single blob
+      const blob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
 
       // Create a new File object from the converted blob
       const convertedFile = new File(
-        [convertedBlob],
-        file.name.replace(/\.heic$/i, '.jpg'),
+        [blob],
+        file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'),
         { type: 'image/jpeg' }
       );
 
       return convertedFile;
     } catch (error) {
       console.error('HEIC conversion failed:', error);
-      throw new Error('Failed to convert HEIC image. Please try a different format.');
+      // Provide a more helpful error message
+      throw new Error('Failed to convert HEIC image. This might be due to browser compatibility. Please try converting the image to JPEG manually or use a different browser.');
     }
   }
 
@@ -64,11 +70,21 @@ class ImageService {
    * Prepare file for upload (convert HEIC if needed)
    */
   private async prepareFileForUpload(file: File): Promise<File> {
-    // Check if file is HEIC
-    if (file.type === 'image/heic' || file.type === 'image/heif' || 
-        file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+    // Check if file is HEIC/HEIF
+    const isHeic = file.type === 'image/heic' || 
+                   file.type === 'image/heif' ||
+                   file.name.toLowerCase().endsWith('.heic') ||
+                   file.name.toLowerCase().endsWith('.heif');
+    
+    if (isHeic) {
       console.log('Converting HEIC file to JPEG...');
-      return await this.convertHeicToJpeg(file);
+      try {
+        return await this.convertHeicToJpeg(file);
+      } catch (error) {
+        // If conversion fails, provide fallback behavior
+        console.warn('HEIC conversion failed, suggesting alternative:', error);
+        throw new Error('HEIC conversion is not supported in this browser. Please convert your HEIC image to JPEG using your device\'s photo app or try a different browser.');
+      }
     }
     
     return file;
