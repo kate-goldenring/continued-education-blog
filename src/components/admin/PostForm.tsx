@@ -99,6 +99,7 @@ export default function PostForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    console.log('Input changed:', name, '=', value);
     setFormData(prev => ({ ...prev, [name]: value }));
     // Clear save error when user starts typing
     if (saveError) setSaveError(null);
