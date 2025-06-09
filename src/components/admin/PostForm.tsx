@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Save, X, Upload, Eye, Plus, Trash2 } from 'lucide-react';
+import { Save, X, Eye, Plus, Trash2, Image as ImageIcon, Upload } from 'lucide-react';
 import { useBlogPosts } from '../../hooks/useBlogPosts';
 import { BlogFormData } from '../../types/BlogPost';
+import ImageUpload from './ImageUpload';
+import ImageGallery from './ImageGallery';
+import { ImageUploadResult } from '../../services/imageService';
 
 export default function PostForm() {
   const navigate = useNavigate();
@@ -20,7 +23,11 @@ export default function PostForm() {
   });
 
   const [showPreview, setShowPreview] = useState(false);
+  const [showImageGallery, setShowImageGallery] = useState(false);
+  const [showImageUpload, setShowImageUpload] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [selectingImageFor, setSelectingImageFor] = useState<'main' | number | null>(null);
 
   useEffect(() => {
     if (isEditing && id) {
@@ -61,6 +68,31 @@ export default function PostForm() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleImageUploaded = (result: ImageUploadResult) => {
+    setUploadError(null);
+    
+    if (selectingImageFor === 'main') {
+      setFormData(prev => ({ ...prev, imageUrl: result.publicUrl }));
+      setSelectingImageFor(null);
+    } else if (typeof selectingImageFor === 'number') {
+      updateImage(selectingImageFor, result.publicUrl);
+      setSelectingImageFor(null);
+    }
+    
+    setShowImageUpload(false);
+  };
+
+  const handleImageSelected = (imageUrl: string) => {
+    if (selectingImageFor === 'main') {
+      setFormData(prev => ({ ...prev, imageUrl: imageUrl }));
+    } else if (typeof selectingImageFor === 'number') {
+      updateImage(selectingImageFor, imageUrl);
+    }
+    
+    setSelectingImageFor(null);
+    setShowImageGallery(false);
+  };
+
   const addImage = () => {
     if (formData.images.length < 10) {
       setFormData(prev => ({
@@ -82,6 +114,16 @@ export default function PostForm() {
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
+  };
+
+  const openImageSelector = (target: 'main' | number) => {
+    setSelectingImageFor(target);
+    setShowImageGallery(true);
+  };
+
+  const openImageUploader = (target: 'main' | number) => {
+    setSelectingImageFor(target);
+    setShowImageUpload(true);
   };
 
   const renderPreview = () => {
@@ -211,27 +253,46 @@ export default function PostForm() {
 
               {/* Main Image URL */}
               <div>
-                <label htmlFor="imageUrl" className="block text-sm font-medium text-gray-700 mb-2">
-                  Main Image URL (Gallery Thumbnail)
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Main Image (Gallery Thumbnail)
                 </label>
-                <div className="flex">
-                  <input
-                    type="url"
-                    id="imageUrl"
-                    name="imageUrl"
-                    value={formData.imageUrl}
-                    onChange={handleChange}
-                    required
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="https://example.com/image.jpg"
-                  />
-                  <button
-                    type="button"
-                    className="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 transition-colors duration-200"
-                    title="Upload Image"
-                  >
-                    <Upload className="w-4 h-4" />
-                  </button>
+                <div className="space-y-3">
+                  <div className="flex space-x-2">
+                    <input
+                      type="url"
+                      name="imageUrl"
+                      value={formData.imageUrl}
+                      onChange={handleChange}
+                      required
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => openImageSelector('main')}
+                      className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                      title="Select from gallery"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openImageUploader('main')}
+                      className="px-3 py-2 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 transition-colors duration-200"
+                      title="Upload new image"
+                    >
+                      <Upload className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {formData.imageUrl && (
+                    <div className="w-32 h-32 rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={formData.imageUrl}
+                        alt="Main image preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -271,31 +332,52 @@ export default function PostForm() {
                 
                 <div className="space-y-3">
                   {formData.images.map((image, index) => (
-                    <div key={index} className="flex items-center space-x-3">
-                      <div className="flex-1 flex">
-                        <input
-                          type="url"
-                          value={image}
-                          onChange={(e) => updateImage(index, e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder={`Image ${index + 1} URL`}
-                        />
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-1 flex space-x-2">
+                          <input
+                            type="url"
+                            value={image}
+                            onChange={(e) => updateImage(index, e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder={`Image ${index + 1} URL`}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => openImageSelector(index)}
+                            className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                            title="Select from gallery"
+                          >
+                            <ImageIcon className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openImageUploader(index)}
+                            className="px-3 py-2 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 transition-colors duration-200"
+                            title="Upload new image"
+                          >
+                            <Upload className="w-4 h-4" />
+                          </button>
+                        </div>
                         <button
                           type="button"
-                          className="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200 transition-colors duration-200"
-                          title="Upload Image"
+                          onClick={() => removeImage(index)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
+                          title="Remove Image"
                         >
-                          <Upload className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
-                        title="Remove Image"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      
+                      {image && (
+                        <div className="w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
+                          <img
+                            src={image}
+                            alt={`Preview ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -342,6 +424,68 @@ export default function PostForm() {
           </form>
         )}
       </div>
+
+      {/* Image Gallery Modal */}
+      {showImageGallery && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl max-h-full overflow-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Select Image</h3>
+                <button
+                  onClick={() => {
+                    setShowImageGallery(false);
+                    setSelectingImageFor(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <ImageGallery
+                onImageSelect={handleImageSelected}
+                showSelectButton={true}
+                className="max-h-96 overflow-y-auto"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Upload Modal */}
+      {showImageUpload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Upload Image</h3>
+                <button
+                  onClick={() => {
+                    setShowImageUpload(false);
+                    setSelectingImageFor(null);
+                    setUploadError(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-full"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {uploadError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <p className="text-red-700 text-sm">{uploadError}</p>
+                </div>
+              )}
+
+              <ImageUpload
+                onImageUploaded={handleImageUploaded}
+                onError={setUploadError}
+                folder="blog-posts"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

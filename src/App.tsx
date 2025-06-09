@@ -8,6 +8,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminLayout from './components/admin/AdminLayout';
 import PostList from './components/admin/PostList';
 import PostForm from './components/admin/PostForm';
+import ImageManager from './components/admin/ImageManager';
 
 function App() {
   return (
@@ -35,6 +36,13 @@ function App() {
             <ProtectedRoute>
               <AdminLayout>
                 <PostForm />
+              </AdminLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/images" element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <ImageManager />
               </AdminLayout>
             </ProtectedRoute>
           } />
