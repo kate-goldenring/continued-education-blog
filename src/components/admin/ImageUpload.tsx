@@ -132,7 +132,7 @@ export default function ImageUpload({
               Click to upload or drag and drop
             </p>
             <p className="text-xs text-gray-500">
-              PNG, JPG, WebP up to 10MB
+              PNG, JPG, WebP up to 50MB
             </p>
           </div>
         )}

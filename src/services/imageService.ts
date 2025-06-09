@@ -261,12 +261,12 @@ class ImageService {
       };
     }
 
-    // Check file size (10MB limit)
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    // Check file size (50MB limit)
+    const maxSize = 50 * 1024 * 1024; // 50MB
     if (file.size > maxSize) {
       return {
         valid: false,
-        error: 'File size too large. Please upload images smaller than 10MB.'
+        error: 'File size too large. Please upload images smaller than 50MB.'
       };
     }
 
