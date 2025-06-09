@@ -21,25 +21,26 @@ export default function PhotoCard({ post, onClick }: PhotoCardProps) {
           loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-            <span className="inline-block px-3 py-1 bg-blue-600 text-xs font-semibold rounded-full mb-3 uppercase tracking-wide">
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+            <span className="inline-block px-2 py-1 sm:px-3 sm:py-1 bg-blue-600 text-xs font-semibold rounded-full mb-2 sm:mb-3 uppercase tracking-wide">
               {post.category}
             </span>
-            <h3 className="text-xl font-bold mb-2 leading-tight">
+            <h3 className="text-lg sm:text-xl font-bold mb-2 leading-tight line-clamp-2">
               {post.title}
             </h3>
-            <p className="text-sm text-gray-200 line-clamp-2 mb-3">
+            <p className="text-sm text-gray-200 line-clamp-2 mb-2 sm:mb-3 leading-relaxed">
               {post.excerpt}
             </p>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center text-xs text-gray-300">
-                <span>{post.date}</span>
-                <span className="mx-2">•</span>
-                <span>{post.readTime}</span>
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center text-gray-300 min-w-0 flex-1 mr-2">
+                <span className="truncate">{post.date}</span>
+                <span className="mx-1 sm:mx-2 flex-shrink-0">•</span>
+                <span className="truncate">{post.readTime}</span>
               </div>
-              <div className="flex items-center text-xs text-gray-300">
+              <div className="flex items-center text-gray-300 flex-shrink-0">
                 <Camera className="w-3 h-3 mr-1" />
-                <span>Kate Goldenring</span>
+                <span className="hidden sm:inline">Kate Goldenring</span>
+                <span className="sm:hidden">KG</span>
               </div>
             </div>
           </div>
