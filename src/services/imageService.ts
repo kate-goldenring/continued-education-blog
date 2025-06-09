@@ -24,13 +24,20 @@ export interface ImageMetadata {
   createdAt: string;
 }
 
+export interface ImageUploadMetadata {
+  photographer?: string;
+  copyright?: string;
+  altText?: string;
+  caption?: string;
+}
+
 class ImageService {
   private readonly bucketName = 'blog-images';
 
   /**
    * Upload an image file to Supabase Storage
    */
-  async uploadImage(file: File, folder?: string): Promise<ImageUploadResult> {
+  async uploadImage(file: File, folder?: string, metadata?: ImageUploadMetadata): Promise<ImageUploadResult> {
     try {
       // Generate unique filename
       const fileExt = file.name.split('.').pop();
@@ -73,8 +80,10 @@ class ImageService {
           mime_type: file.type,
           width: dimensions.width,
           height: dimensions.height,
-          photographer: 'Visual Stories Blog',
-          copyright: '© 2024 Visual Stories Blog. All rights reserved.'
+          photographer: metadata?.photographer || 'Continued Education',
+          copyright: metadata?.copyright || '© 2024 Continued Education. All rights reserved.',
+          alt_text: metadata?.altText,
+          caption: metadata?.caption
         })
         .select()
         .single();

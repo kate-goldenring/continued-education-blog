@@ -26,7 +26,7 @@ export default function Gallery() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <h1 className="text-4xl font-bold text-gray-900">Visual Stories</h1>
+              <h1 className="text-4xl font-bold text-gray-900">Continued Education</h1>
               <button
                 onClick={() => navigate('/admin')}
                 className="ml-6 p-2 text-gray-400 hover:text-blue-600 transition-colors duration-200"

@@ -1,4 +1,4 @@
-# Visual Stories Blog
+# Continued Education Blog
 
 A beautiful, responsive blog application built with React, TypeScript, Tailwind CSS, and Supabase authentication.
 
@@ -10,6 +10,7 @@ A beautiful, responsive blog application built with React, TypeScript, Tailwind 
 - 🖼️ Photo galleries with lightbox viewer
 - 🏷️ Category filtering
 - 📝 Markdown-style content editing
+- 📸 Image upload with photographer attribution
 - 🎨 Beautiful, production-ready design
 
 ## Setup
@@ -18,7 +19,7 @@ A beautiful, responsive blog application built with React, TypeScript, Tailwind 
 
 ```bash
 git clone <your-repo>
-cd visual-stories-blog
+cd continued-education-blog
 npm install
 ```
 
@@ -75,6 +76,24 @@ The application uses Supabase Authentication with the following features:
 2. Use the email and password you created in Supabase
 3. Access the admin panel to manage blog posts
 
+## Image Management
+
+### Upload Features
+
+- **High-Quality Support**: Upload images up to 50MB
+- **Photographer Attribution**: Give proper credit to photographers
+- **Copyright Management**: Automatic copyright notices
+- **Metadata Support**: Alt text and captions for accessibility
+- **Secure Storage**: Images stored in Supabase Storage
+
+### Photo Credits
+
+When uploading images:
+- Leave photographer field blank for your own photos (defaults to "Continued Education")
+- Enter photographer name for images taken by others
+- Customize copyright notices as needed
+- Add descriptive alt text for accessibility
+
 ## Supabase Configuration
 
 ### Authentication Settings
@@ -91,11 +110,20 @@ In your Supabase dashboard:
 3. **Authentication > Providers** (optional):
    - Enable additional providers like Google, GitHub, etc.
 
+### Storage Configuration
+
+The application automatically sets up:
+- **blog-images** bucket for image storage
+- Public read access for blog images
+- Authenticated upload/delete permissions
+- 50MB file size limit for high-quality images
+
 ### Security
 
 - Email confirmation is disabled by default for easier development
 - In production, enable email confirmation and configure SMTP
-- Row Level Security (RLS) can be added for additional data protection
+- Row Level Security (RLS) is enabled for all data tables
+- Image metadata includes proper attribution and copyright
 
 ## Development
 
@@ -109,6 +137,7 @@ src/
 │   └── ...             # Other components
 ├── contexts/           # React contexts (AuthContext)
 ├── lib/                # Supabase client configuration
+├── services/           # API services (imageService)
 ├── types/              # TypeScript type definitions
 └── ...
 ```
@@ -117,6 +146,7 @@ src/
 
 - `src/lib/supabase.ts` - Supabase client configuration
 - `src/contexts/AuthContext.tsx` - Authentication context and logic
+- `src/services/imageService.ts` - Image upload and management
 - `src/components/auth/LoginForm.tsx` - Login form component
 - `src/components/auth/ProtectedRoute.tsx` - Route protection
 
@@ -135,11 +165,14 @@ VITE_SUPABASE_ANON_KEY=your_production_supabase_anon_key
 2. Configure redirect URLs for your production domain
 3. Enable email confirmation and configure SMTP for production
 4. Set up proper RLS policies if needed
+5. Configure storage bucket for production use
 
 ## Technologies Used
 
 - **Frontend**: React 18, TypeScript, Tailwind CSS
 - **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage
+- **Database**: Supabase PostgreSQL
 - **Routing**: React Router
 - **Icons**: Lucide React
 - **Build Tool**: Vite
@@ -157,7 +190,12 @@ VITE_SUPABASE_ANON_KEY=your_production_supabase_anon_key
    - Verify the site URL is configured in Supabase dashboard
    - Make sure you have created a user in the Supabase dashboard
 
-3. **Login redirects not working**
+3. **Image upload failing**
+   - Check that the storage bucket is properly configured
+   - Verify file size is under 50MB limit
+   - Ensure proper file types (JPEG, PNG, WebP, GIF)
+
+4. **Login redirects not working**
    - Check redirect URLs in Supabase dashboard
    - Ensure site URL matches your development/production domain
 
@@ -165,4 +203,5 @@ VITE_SUPABASE_ANON_KEY=your_production_supabase_anon_key
 
 - [Supabase Documentation](https://supabase.com/docs)
 - [Supabase Auth Guide](https://supabase.com/docs/guides/auth)
+- [Supabase Storage Guide](https://supabase.com/docs/guides/storage)
 - [React + Supabase Tutorial](https://supabase.com/docs/guides/getting-started/tutorials/with-react)
