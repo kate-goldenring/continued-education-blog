@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, AlertCircle, RefreshCw } from 'lucide-react';
+import { Settings, AlertCircle, RefreshCw, Database } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
 import { Category } from '../types/BlogPost';
 import FilterBar from './FilterBar';
@@ -18,6 +18,8 @@ export default function Gallery() {
   const handlePostClick = (postId: string) => {
     navigate(`/post/${postId}`);
   };
+
+  const isSupabaseError = error?.includes('relation "public.blog_posts" does not exist');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -54,14 +56,58 @@ export default function Gallery() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Error Message */}
-        {error && (
+        {/* Supabase Setup Error */}
+        {isSupabaseError && (
+          <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start">
+              <Database className="w-6 h-6 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="text-lg font-semibold text-blue-900 mb-2">Database Setup Required</h3>
+                <p className="text-blue-800 mb-4">
+                  The blog database table hasn't been created yet. This is normal for a new Supabase project.
+                </p>
+                
+                <div className="bg-white rounded-lg p-4 border border-blue-200 mb-4">
+                  <h4 className="font-semibold text-blue-900 mb-2">To fix this issue:</h4>
+                  <ol className="list-decimal list-inside space-y-2 text-blue-800 text-sm">
+                    <li>Go to your <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-600">Supabase Dashboard</a></li>
+                    <li>Select your project</li>
+                    <li>Go to <strong>SQL Editor</strong> in the left sidebar</li>
+                    <li>Click <strong>"New query"</strong></li>
+                    <li>Copy and paste the migration SQL from your project files</li>
+                    <li>Run the query to create the database tables</li>
+                  </ol>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                  <p className="text-yellow-800 text-sm">
+                    <strong>Migration files location:</strong> <code className="bg-yellow-100 px-1 rounded">supabase/migrations/</code>
+                  </p>
+                  <p className="text-yellow-800 text-sm mt-1">
+                    Run the files in chronological order (by timestamp in filename).
+                  </p>
+                </div>
+
+                <button
+                  onClick={refreshPosts}
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors duration-200"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Check Again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* General Error Message */}
+        {error && !isSupabaseError && (
           <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
             <AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-red-700 text-sm font-medium">{error}</p>
               <p className="text-red-600 text-xs mt-1">
-                Unable to load blog posts. Check your internet connection and Supabase configuration.
+                Check your internet connection and Supabase configuration.
               </p>
               <button
                 onClick={refreshPosts}
@@ -82,7 +128,7 @@ export default function Gallery() {
         )}
 
         {/* Filter Bar */}
-        {!loading && (
+        {!loading && !isSupabaseError && (
           <FilterBar 
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
@@ -90,7 +136,7 @@ export default function Gallery() {
         )}
 
         {/* Photo Gallery */}
-        {!loading && (
+        {!loading && !isSupabaseError && (
           <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6">
             {filteredPosts.map((post) => (
               <PhotoCard
