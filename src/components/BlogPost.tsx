@@ -95,7 +95,7 @@ export default function BlogPost() {
         <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
           <div className="flex items-center text-white text-sm">
             <Camera className="w-4 h-4 mr-2" />
-            <span>Photo by Continued Education</span>
+            <span>Photo by Kate Goldenring</span>
           </div>
         </div>
       </div>
@@ -157,7 +157,7 @@ export default function BlogPost() {
                     <div className="absolute bottom-3 left-3 right-3">
                       <div className="flex items-center text-white text-xs">
                         <Camera className="w-3 h-3 mr-1" />
-                        <span>Continued Education</span>
+                        <span>Kate Goldenring</span>
                       </div>
                     </div>
                   </div>
@@ -172,7 +172,7 @@ export default function BlogPost() {
                 <div>
                   <h4 className="text-sm font-semibold text-gray-900 mb-1">Photo Credits</h4>
                   <p className="text-sm text-gray-600">
-                    All photos in this gallery are © 2024 Continued Education. All rights reserved.
+                    All photos in this gallery are © 2024 Continued Education Blog. All rights reserved.
                     For licensing inquiries, please contact us.
                   </p>
                 </div>
@@ -249,7 +249,7 @@ export default function BlogPost() {
               <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
                 <div className="flex items-center text-white text-sm">
                   <Camera className="w-4 h-4 mr-2" />
-                  <span>© 2024 Continued Education</span>
+                  <span>© 2024 Continued Education Blog</span>
                 </div>
               </div>
             </div>

@@ -39,7 +39,7 @@ export default function PhotoCard({ post, onClick }: PhotoCardProps) {
               </div>
               <div className="flex items-center text-xs text-gray-300">
                 <Camera className="w-3 h-3 mr-1" />
-                <span>Continued Education</span>
+                <span>Kate Goldenring</span>
               </div>
             </div>
           </div>

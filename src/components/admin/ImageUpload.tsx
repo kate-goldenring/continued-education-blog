@@ -59,8 +59,8 @@ export default function ImageUpload({
 
       // Upload image with metadata
       const result = await imageService.uploadImage(selectedFile, folder, {
-        photographer: metadata.photographer || 'Continued Education',
-        copyright: metadata.copyright || '© 2024 Continued Education. All rights reserved.',
+        photographer: metadata.photographer || 'Kate Goldenring',
+        copyright: metadata.copyright || '© 2024 Continued Education Blog. All rights reserved.',
         altText: metadata.altText,
         caption: metadata.caption
       });
@@ -163,7 +163,7 @@ export default function ImageUpload({
               placeholder="Enter photographer name (leave blank if it's your photo)"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Leave blank to default to "Continued Education"
+              Leave blank to default to "Kate Goldenring"
             </p>
           </div>
 
@@ -179,7 +179,7 @@ export default function ImageUpload({
               placeholder="© 2024 Photographer Name. All rights reserved."
             />
             <p className="text-xs text-gray-500 mt-1">
-              Leave blank to use default copyright notice
+              Leave blank to use default: "© 2024 Continued Education Blog. All rights reserved."
             </p>
           </div>
 

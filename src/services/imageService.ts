@@ -80,8 +80,8 @@ class ImageService {
           mime_type: file.type,
           width: dimensions.width,
           height: dimensions.height,
-          photographer: metadata?.photographer || 'Continued Education',
-          copyright: metadata?.copyright || '© 2024 Continued Education. All rights reserved.',
+          photographer: metadata?.photographer || 'Kate Goldenring',
+          copyright: metadata?.copyright || '© 2024 Continued Education Blog. All rights reserved.',
           alt_text: metadata?.altText,
           caption: metadata?.caption
         })
