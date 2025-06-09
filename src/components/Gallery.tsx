@@ -25,7 +25,7 @@ export default function Gallery() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <div className="flex items-center justify-center mb-4">
               <h1 className="text-4xl font-bold text-gray-900">Continued Education</h1>
@@ -55,10 +55,10 @@ export default function Gallery() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 2xl:px-16 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Supabase Setup Error */}
         {isSupabaseError && (
-          <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg max-w-4xl mx-auto">
+          <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-start">
               <Database className="w-6 h-6 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
               <div>
@@ -102,7 +102,7 @@ export default function Gallery() {
 
         {/* General Error Message */}
         {error && !isSupabaseError && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start max-w-4xl mx-auto">
+          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start">
             <AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-red-700 text-sm font-medium">{error}</p>
@@ -135,9 +135,9 @@ export default function Gallery() {
           />
         )}
 
-        {/* Photo Gallery - Responsive Masonry Layout */}
+        {/* Photo Gallery */}
         {!loading && !isSupabaseError && (
-          <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6 gap-6">
+          <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-6">
             {filteredPosts.map((post) => (
               <PhotoCard
                 key={post.id}
