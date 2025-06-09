@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import heic2any from 'heic2any';
 
 export interface ImageUploadResult {
   id: string;
@@ -35,19 +36,61 @@ class ImageService {
   private readonly bucketName = 'blog-images';
 
   /**
+   * Convert HEIC file to JPEG
+   */
+  private async convertHeicToJpeg(file: File): Promise<File> {
+    try {
+      const convertedBlob = await heic2any({
+        blob: file,
+        toType: 'image/jpeg',
+        quality: 0.9
+      }) as Blob;
+
+      // Create a new File object from the converted blob
+      const convertedFile = new File(
+        [convertedBlob],
+        file.name.replace(/\.heic$/i, '.jpg'),
+        { type: 'image/jpeg' }
+      );
+
+      return convertedFile;
+    } catch (error) {
+      console.error('HEIC conversion failed:', error);
+      throw new Error('Failed to convert HEIC image. Please try a different format.');
+    }
+  }
+
+  /**
+   * Prepare file for upload (convert HEIC if needed)
+   */
+  private async prepareFileForUpload(file: File): Promise<File> {
+    // Check if file is HEIC
+    if (file.type === 'image/heic' || file.type === 'image/heif' || 
+        file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+      console.log('Converting HEIC file to JPEG...');
+      return await this.convertHeicToJpeg(file);
+    }
+    
+    return file;
+  }
+
+  /**
    * Upload an image file to Supabase Storage
    */
   async uploadImage(file: File, folder?: string, metadata?: ImageUploadMetadata): Promise<ImageUploadResult> {
     try {
+      // Prepare file (convert HEIC if needed)
+      const processedFile = await this.prepareFileForUpload(file);
+      
       // Generate unique filename
-      const fileExt = file.name.split('.').pop();
+      const fileExt = processedFile.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
       const filePath = folder ? `${folder}/${fileName}` : fileName;
 
       // Upload file to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(this.bucketName)
-        .upload(filePath, file, {
+        .upload(filePath, processedFile, {
           cacheControl: '3600',
           upsert: false
         });
@@ -66,18 +109,18 @@ class ImageService {
       }
 
       // Get image dimensions
-      const dimensions = await this.getImageDimensions(file);
+      const dimensions = await this.getImageDimensions(processedFile);
 
       // Save metadata to database
       const { data: metadataData, error: metadataError } = await supabase
         .from('blog_images')
         .insert({
           filename: fileName,
-          original_name: file.name,
+          original_name: file.name, // Keep original name (including .heic)
           storage_path: filePath,
           public_url: urlData.publicUrl,
-          file_size: file.size,
-          mime_type: file.type,
+          file_size: processedFile.size, // Use processed file size
+          mime_type: processedFile.type, // Use processed file type (image/jpeg)
           width: dimensions.width,
           height: dimensions.height,
           photographer: metadata?.photographer || 'Kate Goldenring',
@@ -261,12 +304,30 @@ class ImageService {
    * Validate image file
    */
   validateImageFile(file: File): { valid: boolean; error?: string } {
-    // Check file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    if (!allowedTypes.includes(file.type)) {
+    // Check file type (including HEIC/HEIF)
+    const allowedTypes = [
+      'image/jpeg', 
+      'image/png', 
+      'image/webp', 
+      'image/gif',
+      'image/heic',
+      'image/heif'
+    ];
+    
+    // Also check file extension for HEIC files (some browsers don't set the correct MIME type)
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = fileName.endsWith('.jpg') || 
+                             fileName.endsWith('.jpeg') || 
+                             fileName.endsWith('.png') || 
+                             fileName.endsWith('.webp') || 
+                             fileName.endsWith('.gif') ||
+                             fileName.endsWith('.heic') ||
+                             fileName.endsWith('.heif');
+
+    if (!allowedTypes.includes(file.type) && !hasValidExtension) {
       return {
         valid: false,
-        error: 'Invalid file type. Please upload JPEG, PNG, WebP, or GIF images.'
+        error: 'Invalid file type. Please upload JPEG, PNG, WebP, GIF, or HEIC images.'
       };
     }
 

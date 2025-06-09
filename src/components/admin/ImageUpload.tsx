@@ -15,7 +15,7 @@ export default function ImageUpload({
   onImageUploaded,
   onError,
   className = '',
-  accept = 'image/*',
+  accept = 'image/*,.heic,.heif',
   multiple = false,
   folder
 }: ImageUploadProps) {
@@ -55,7 +55,17 @@ export default function ImageUpload({
     setUploadProgress('Preparing upload...');
 
     try {
-      setUploadProgress('Uploading image...');
+      // Check if it's a HEIC file and show conversion message
+      const isHeic = selectedFile.type === 'image/heic' || 
+                     selectedFile.type === 'image/heif' ||
+                     selectedFile.name.toLowerCase().endsWith('.heic') ||
+                     selectedFile.name.toLowerCase().endsWith('.heif');
+      
+      if (isHeic) {
+        setUploadProgress('Converting HEIC to JPEG...');
+      } else {
+        setUploadProgress('Uploading image...');
+      }
 
       // Upload image with metadata
       const result = await imageService.uploadImage(selectedFile, folder, {
@@ -138,13 +148,26 @@ export default function ImageUpload({
     fileInputRef.current?.click();
   };
 
+  const getFileTypeDisplay = (file: File) => {
+    const isHeic = file.type === 'image/heic' || 
+                   file.type === 'image/heif' ||
+                   file.name.toLowerCase().endsWith('.heic') ||
+                   file.name.toLowerCase().endsWith('.heif');
+    
+    if (isHeic) {
+      return `${file.name} (will be converted to JPEG)`;
+    }
+    
+    return file.name;
+  };
+
   if (showMetadataForm && selectedFile) {
     return (
       <div className={`bg-white border border-gray-300 rounded-lg p-6 ${className}`}>
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Image Details</h3>
           <div className="flex items-center space-x-3 text-sm text-gray-600">
-            <span>{selectedFile.name}</span>
+            <span>{getFileTypeDisplay(selectedFile)}</span>
             <span>•</span>
             <span>{(selectedFile.size / 1024 / 1024).toFixed(1)} MB</span>
           </div>
@@ -279,7 +302,7 @@ export default function ImageUpload({
               Click to upload or drag and drop
             </p>
             <p className="text-xs text-gray-500">
-              PNG, JPG, WebP up to 50MB
+              PNG, JPG, WebP, HEIC up to 50MB
             </p>
           </div>
         )}
