@@ -71,14 +71,18 @@ export default function PostForm() {
   const handleImageUploaded = (result: ImageUploadResult) => {
     setUploadError(null);
     
+    // Update the form data based on what we're selecting for
     if (selectingImageFor === 'main') {
       setFormData(prev => ({ ...prev, imageUrl: result.publicUrl }));
-      setSelectingImageFor(null);
     } else if (typeof selectingImageFor === 'number') {
-      updateImage(selectingImageFor, result.publicUrl);
-      setSelectingImageFor(null);
+      setFormData(prev => ({
+        ...prev,
+        images: prev.images.map((img, i) => i === selectingImageFor ? result.publicUrl : img)
+      }));
     }
     
+    // Close the upload modal and reset selection
+    setSelectingImageFor(null);
     setShowImageUpload(false);
   };
 
@@ -86,7 +90,10 @@ export default function PostForm() {
     if (selectingImageFor === 'main') {
       setFormData(prev => ({ ...prev, imageUrl: imageUrl }));
     } else if (typeof selectingImageFor === 'number') {
-      updateImage(selectingImageFor, imageUrl);
+      setFormData(prev => ({
+        ...prev,
+        images: prev.images.map((img, i) => i === selectingImageFor ? imageUrl : img)
+      }));
     }
     
     setSelectingImageFor(null);
@@ -124,6 +131,13 @@ export default function PostForm() {
   const openImageUploader = (target: 'main' | number) => {
     setSelectingImageFor(target);
     setShowImageUpload(true);
+  };
+
+  const closeModals = () => {
+    setShowImageGallery(false);
+    setShowImageUpload(false);
+    setSelectingImageFor(null);
+    setUploadError(null);
   };
 
   const renderPreview = () => {
@@ -433,10 +447,7 @@ export default function PostForm() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Select Image</h3>
                 <button
-                  onClick={() => {
-                    setShowImageGallery(false);
-                    setSelectingImageFor(null);
-                  }}
+                  onClick={closeModals}
                   className="p-2 hover:bg-gray-100 rounded-full"
                 >
                   <X className="w-5 h-5" />
@@ -460,11 +471,7 @@ export default function PostForm() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Upload Image</h3>
                 <button
-                  onClick={() => {
-                    setShowImageUpload(false);
-                    setSelectingImageFor(null);
-                    setUploadError(null);
-                  }}
+                  onClick={closeModals}
                   className="p-2 hover:bg-gray-100 rounded-full"
                 >
                   <X className="w-5 h-5" />
