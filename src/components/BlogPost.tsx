@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, ChevronLeft, ChevronRight, X, Camera, Copyright } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
 
 export default function BlogPost() {
@@ -90,6 +90,14 @@ export default function BlogPost() {
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+        
+        {/* Hero Image Attribution */}
+        <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
+          <div className="flex items-center text-white text-sm">
+            <Camera className="w-4 h-4 mr-2" />
+            <span>Photo by Continued Education</span>
+          </div>
+        </div>
       </div>
 
       {/* Article Content */}
@@ -135,7 +143,7 @@ export default function BlogPost() {
               {post.images.map((image, index) => (
                 <div
                   key={index}
-                  className="group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300"
+                  className="group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300 relative"
                   onClick={() => openLightbox(index)}
                 >
                   <img
@@ -143,8 +151,32 @@ export default function BlogPost() {
                     alt={`Gallery image ${index + 1}`}
                     className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
                   />
+                  
+                  {/* Image Attribution Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <div className="flex items-center text-white text-xs">
+                        <Camera className="w-3 h-3 mr-1" />
+                        <span>Continued Education</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ))}
+            </div>
+            
+            {/* Gallery Attribution Note */}
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="flex items-start space-x-3">
+                <Copyright className="w-5 h-5 text-gray-500 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-1">Photo Credits</h4>
+                  <p className="text-sm text-gray-600">
+                    All photos in this gallery are © 2024 Continued Education. All rights reserved.
+                    For licensing inquiries, please contact us.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -209,9 +241,17 @@ export default function BlogPost() {
               </>
             )}
             
-            {/* Image Counter */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white text-sm">
-              {selectedImageIndex + 1} of {post.images.length}
+            {/* Image Counter and Attribution */}
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-center">
+              <div className="text-white text-sm mb-2">
+                {selectedImageIndex + 1} of {post.images.length}
+              </div>
+              <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
+                <div className="flex items-center text-white text-sm">
+                  <Camera className="w-4 h-4 mr-2" />
+                  <span>© 2024 Continued Education</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Trash2, Edit3, Eye, X, Check, AlertCircle } from 'lucide-react';
+import { Copy, Trash2, Edit3, Eye, X, Check, AlertCircle, Camera, Copyright } from 'lucide-react';
 import { imageService, ImageMetadata } from '../../services/imageService';
 
 interface ImageGalleryProps {
@@ -178,12 +178,20 @@ export default function ImageGallery({
                 <p className="text-xs text-gray-600 truncate" title={image.originalName}>
                   {image.originalName}
                 </p>
-                <p className="text-xs text-gray-400">
-                  {(image.fileSize / 1024 / 1024).toFixed(1)} MB
-                  {image.width && image.height && (
-                    <span> • {image.width}×{image.height}</span>
-                  )}
-                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-gray-400">
+                    {(image.fileSize / 1024 / 1024).toFixed(1)} MB
+                    {image.width && image.height && (
+                      <span> • {image.width}×{image.height}</span>
+                    )}
+                  </p>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <Camera className="w-3 h-3 mr-1" />
+                    <span className="truncate max-w-16" title={image.photographer}>
+                      {image.photographer}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -236,13 +244,33 @@ export default function ImageGallery({
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Photographer</label>
-                    <p className="text-sm text-gray-900">{selectedImage.photographer}</p>
+                    <div className="flex items-center">
+                      <Camera className="w-4 h-4 mr-2 text-gray-500" />
+                      <p className="text-sm text-gray-900">{selectedImage.photographer}</p>
+                    </div>
                   </div>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Copyright</label>
-                    <p className="text-sm text-gray-900">{selectedImage.copyright}</p>
+                    <div className="flex items-center">
+                      <Copyright className="w-4 h-4 mr-2 text-gray-500" />
+                      <p className="text-sm text-gray-900">{selectedImage.copyright}</p>
+                    </div>
                   </div>
+
+                  {selectedImage.altText && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Alt Text</label>
+                      <p className="text-sm text-gray-900">{selectedImage.altText}</p>
+                    </div>
+                  )}
+
+                  {selectedImage.caption && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Caption</label>
+                      <p className="text-sm text-gray-900">{selectedImage.caption}</p>
+                    </div>
+                  )}
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Public URL</label>

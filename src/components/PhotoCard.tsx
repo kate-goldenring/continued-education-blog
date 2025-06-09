@@ -1,4 +1,5 @@
 import React from 'react';
+import { Camera } from 'lucide-react';
 import { BlogPost } from '../types/BlogPost';
 
 interface PhotoCardProps {
@@ -27,13 +28,19 @@ export default function PhotoCard({ post, onClick }: PhotoCardProps) {
             <h3 className="text-xl font-bold mb-2 leading-tight">
               {post.title}
             </h3>
-            <p className="text-sm text-gray-200 line-clamp-2">
+            <p className="text-sm text-gray-200 line-clamp-2 mb-3">
               {post.excerpt}
             </p>
-            <div className="flex items-center mt-3 text-xs text-gray-300">
-              <span>{post.date}</span>
-              <span className="mx-2">•</span>
-              <span>{post.readTime}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center text-xs text-gray-300">
+                <span>{post.date}</span>
+                <span className="mx-2">•</span>
+                <span>{post.readTime}</span>
+              </div>
+              <div className="flex items-center text-xs text-gray-300">
+                <Camera className="w-3 h-3 mr-1" />
+                <span>Continued Education</span>
+              </div>
             </div>
           </div>
         </div>
