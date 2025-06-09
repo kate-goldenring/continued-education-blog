@@ -30,8 +30,9 @@ export default function PostForm() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [selectingImageFor, setSelectingImageFor] = useState<'main' | number | null>(null);
   const [postLoaded, setPostLoaded] = useState(false);
+  const [postNotFound, setPostNotFound] = useState(false);
 
-  // Load post data for editing - only run once when component mounts and data is available
+  // Load post data for editing - only run when loading is complete
   useEffect(() => {
     if (isEditing && id && !loading && !postLoaded) {
       console.log('Loading post for editing, ID:', id);
@@ -47,8 +48,10 @@ export default function PostForm() {
           content: post.content
         });
         setPostLoaded(true);
+        setPostNotFound(false);
       } else {
         console.warn('Post not found for ID:', id);
+        setPostNotFound(true);
         setSaveError('Post not found');
       }
     }
@@ -198,12 +201,44 @@ export default function PostForm() {
     });
   };
 
+  // Show loading state while data is being fetched
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
         <div className="flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
-          <span className="text-gray-600">Loading...</span>
+          <span className="text-gray-600">
+            {isEditing ? 'Loading post...' : 'Loading...'}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Show post not found error for editing mode
+  if (isEditing && postNotFound) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Post Not Found</h2>
+          <p className="text-gray-600 mb-6">
+            The post you're trying to edit could not be found. It may have been deleted or the URL is incorrect.
+          </p>
+          <div className="flex justify-center space-x-3">
+            <button
+              onClick={() => navigate('/admin')}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200"
+            >
+              Back to Admin
+            </button>
+            <button
+              onClick={() => navigate('/admin/new')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
+            >
+              Create New Post
+            </button>
+          </div>
         </div>
       </div>
     );
