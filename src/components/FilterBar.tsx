@@ -1,4 +1,3 @@
-import React from 'react';
 import { Category } from '../types/BlogPost';
 
 interface FilterBarProps {
@@ -11,7 +10,7 @@ const categories: { key: Category; label: string }[] = [
   { key: 'hiking', label: 'Hiking' },
   { key: 'travel', label: 'Travel' },
   { key: 'food', label: 'Food' },
-  { key: 'photography', label: 'Photography' },
+  { key: 'mountaineering', label: 'Mountaineering' },
   { key: 'lifestyle', label: 'Lifestyle' }
 ];
 

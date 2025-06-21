@@ -1,4 +1,3 @@
-import React from 'react';
 import { Camera } from 'lucide-react';
 import { BlogPost } from '../types/BlogPost';
 import { useImageMetadata } from '../hooks/useImageMetadata';

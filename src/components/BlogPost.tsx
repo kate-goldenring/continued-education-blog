@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, ChevronLeft, ChevronRight, X, Camera, Copyright } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, ChevronLeft, ChevronRight, X, Camera } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
 import { useImageMetadata, useImageMetadataMap } from '../hooks/useImageMetadata';
 
@@ -76,7 +76,6 @@ export default function BlogPost() {
 
   // Get photographer for main image
   const mainImagePhotographer = mainImageMetadata?.photographer || 'Kate Goldenring';
-  const mainImageCopyright = mainImageMetadata?.copyright || '© 2024 Continued Education Blog. All rights reserved.';
 
   return (
     <div className="min-h-screen bg-white">
@@ -179,22 +178,6 @@ export default function BlogPost() {
                   </div>
                 );
               })}
-            </div>
-            
-            {/* Gallery Attribution Note */}
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <div className="flex items-start space-x-3">
-                <Copyright className="w-5 h-5 text-gray-500 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-1">Photo Credits</h4>
-                  <p className="text-sm text-gray-600">
-                    {mainImageCopyright}
-                    {post.images && post.images.length > 0 && (
-                      <span> Additional gallery images may have different attributions as noted.</span>
-                    )}
-                  </p>
-                </div>
-              </div>
             </div>
           </div>
         )}

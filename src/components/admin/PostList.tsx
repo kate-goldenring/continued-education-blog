@@ -31,7 +31,7 @@ export default function PostList() {
     { key: 'hiking', label: 'Hiking' },
     { key: 'travel', label: 'Travel' },
     { key: 'food', label: 'Food' },
-    { key: 'photography', label: 'Photography' },
+    { key: 'mountaineering', label: 'Mountaineering' },
     { key: 'lifestyle', label: 'Lifestyle' }
   ];
 

@@ -366,7 +366,7 @@ export default function PostForm() {
                   <option value="hiking">Hiking</option>
                   <option value="travel">Travel</option>
                   <option value="food">Food</option>
-                  <option value="photography">Photography</option>
+                  <option value="mountaineering">Mountaineering</option>
                   <option value="lifestyle">Lifestyle</option>
                 </select>
               </div>

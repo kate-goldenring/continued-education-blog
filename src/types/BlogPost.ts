@@ -10,7 +10,7 @@ export interface BlogPost {
   readTime: string;
 }
 
-export type Category = 'all' | 'hiking' | 'travel' | 'food' | 'photography' | 'lifestyle';
+export type Category = 'all' | 'hiking' | 'travel' | 'food' | 'mountaineering' | 'lifestyle';
 
 export interface BlogFormData {
   title: string;
