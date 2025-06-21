@@ -252,6 +252,86 @@ class ImageService {
   }
 
   /**
+   * Get image metadata by URL
+   */
+  async getImageMetadataByUrl(publicUrl: string): Promise<ImageMetadata | null> {
+    try {
+      const { data, error } = await supabase
+        .from('blog_images')
+        .select('*')
+        .eq('public_url', publicUrl)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return null; // Image not found
+        }
+        throw new Error(`Failed to fetch image metadata: ${error.message}`);
+      }
+
+      return {
+        id: data.id,
+        filename: data.filename,
+        originalName: data.original_name,
+        publicUrl: data.public_url,
+        fileSize: data.file_size,
+        mimeType: data.mime_type,
+        width: data.width,
+        height: data.height,
+        altText: data.alt_text,
+        caption: data.caption,
+        photographer: data.photographer,
+        copyright: data.copyright,
+        createdAt: data.created_at
+      };
+    } catch (error) {
+      console.error('Failed to fetch image metadata by URL:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get image metadata for multiple URLs
+   */
+  async getImageMetadataByUrls(publicUrls: string[]): Promise<Map<string, ImageMetadata>> {
+    try {
+      const { data, error } = await supabase
+        .from('blog_images')
+        .select('*')
+        .in('public_url', publicUrls);
+
+      if (error) {
+        throw new Error(`Failed to fetch image metadata: ${error.message}`);
+      }
+
+      const metadataMap = new Map<string, ImageMetadata>();
+      
+      data.forEach(item => {
+        metadataMap.set(item.public_url, {
+          id: item.id,
+          filename: item.filename,
+          originalName: item.original_name,
+          publicUrl: item.public_url,
+          fileSize: item.file_size,
+          mimeType: item.mime_type,
+          width: item.width,
+          height: item.height,
+          altText: item.alt_text,
+          caption: item.caption,
+          photographer: item.photographer,
+          copyright: item.copyright,
+          createdAt: item.created_at
+        });
+      });
+
+      return metadataMap;
+    } catch (error) {
+      console.error('Failed to fetch image metadata by URLs:', error);
+      return new Map();
+    }
+  }
+
+  /**
    * Update image metadata
    */
   async updateImageMetadata(id: string, metadata: Partial<Pick<ImageMetadata, 'altText' | 'caption' | 'photographer' | 'copyright'>>): Promise<void> {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Camera } from 'lucide-react';
 import { BlogPost } from '../types/BlogPost';
+import { useImageMetadata } from '../hooks/useImageMetadata';
 
 interface PhotoCardProps {
   post: BlogPost;
@@ -8,6 +9,11 @@ interface PhotoCardProps {
 }
 
 export default function PhotoCard({ post, onClick }: PhotoCardProps) {
+  const { metadata } = useImageMetadata(post.imageUrl);
+  
+  // Use photographer from image metadata, fallback to default
+  const photographer = metadata?.photographer || 'Kate Goldenring';
+
   return (
     <div 
       className="group cursor-pointer transform transition-all duration-300 hover:scale-102 mb-6"
@@ -16,7 +22,7 @@ export default function PhotoCard({ post, onClick }: PhotoCardProps) {
       <div className="relative overflow-hidden rounded-2xl shadow-lg group-hover:shadow-2xl transition-shadow duration-300">
         <img
           src={post.imageUrl}
-          alt={post.title}
+          alt={metadata?.altText || post.title}
           className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-110"
           loading="lazy"
         />
@@ -39,7 +45,7 @@ export default function PhotoCard({ post, onClick }: PhotoCardProps) {
               </div>
               <div className="flex items-center text-xs text-gray-300">
                 <Camera className="w-3 h-3 mr-1" />
-                <span>Kate Goldenring</span>
+                <span>{photographer}</span>
               </div>
             </div>
           </div>

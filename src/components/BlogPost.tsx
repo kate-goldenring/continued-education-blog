@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, ChevronLeft, ChevronRight, X, Camera, Copyright } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
+import { useImageMetadata, useImageMetadataMap } from '../hooks/useImageMetadata';
 
 export default function BlogPost() {
   const { id } = useParams<{ id: string }>();
@@ -10,6 +11,12 @@ export default function BlogPost() {
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   
   const post = getBlogPost(id || '');
+  
+  // Get metadata for the main image
+  const { metadata: mainImageMetadata } = useImageMetadata(post?.imageUrl || null);
+  
+  // Get metadata for all gallery images
+  const { metadataMap: galleryMetadataMap } = useImageMetadataMap(post?.images || []);
 
   if (!post) {
     return (
@@ -67,6 +74,10 @@ export default function BlogPost() {
     if (e.key === 'ArrowRight') navigateImage('next');
   };
 
+  // Get photographer for main image
+  const mainImagePhotographer = mainImageMetadata?.photographer || 'Kate Goldenring';
+  const mainImageCopyright = mainImageMetadata?.copyright || '© 2024 Continued Education Blog. All rights reserved.';
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -86,7 +97,7 @@ export default function BlogPost() {
       <div className="relative h-96 overflow-hidden">
         <img
           src={post.imageUrl}
-          alt={post.title}
+          alt={mainImageMetadata?.altText || post.title}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
@@ -95,7 +106,7 @@ export default function BlogPost() {
         <div className="absolute bottom-4 right-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
           <div className="flex items-center text-white text-sm">
             <Camera className="w-4 h-4 mr-2" />
-            <span>Photo by Kate Goldenring</span>
+            <span>Photo by {mainImagePhotographer}</span>
           </div>
         </div>
       </div>
@@ -140,29 +151,34 @@ export default function BlogPost() {
           <div className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-8">Photo Gallery</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {post.images.map((image, index) => (
-                <div
-                  key={index}
-                  className="group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300 relative"
-                  onClick={() => openLightbox(index)}
-                >
-                  <img
-                    src={image}
-                    alt={`Gallery image ${index + 1}`}
-                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  
-                  {/* Image Attribution Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <div className="absolute bottom-3 left-3 right-3">
-                      <div className="flex items-center text-white text-xs">
-                        <Camera className="w-3 h-3 mr-1" />
-                        <span>Kate Goldenring</span>
+              {post.images.map((image, index) => {
+                const imageMetadata = galleryMetadataMap.get(image);
+                const photographer = imageMetadata?.photographer || 'Kate Goldenring';
+                
+                return (
+                  <div
+                    key={index}
+                    className="group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300 relative"
+                    onClick={() => openLightbox(index)}
+                  >
+                    <img
+                      src={image}
+                      alt={imageMetadata?.altText || `Gallery image ${index + 1}`}
+                      className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    
+                    {/* Image Attribution Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="absolute bottom-3 left-3 right-3">
+                        <div className="flex items-center text-white text-xs">
+                          <Camera className="w-3 h-3 mr-1" />
+                          <span>{photographer}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             {/* Gallery Attribution Note */}
@@ -172,8 +188,10 @@ export default function BlogPost() {
                 <div>
                   <h4 className="text-sm font-semibold text-gray-900 mb-1">Photo Credits</h4>
                   <p className="text-sm text-gray-600">
-                    All photos in this gallery are © 2024 Continued Education Blog. All rights reserved.
-                    For licensing inquiries, please contact us.
+                    {mainImageCopyright}
+                    {post.images && post.images.length > 0 && (
+                      <span> Additional gallery images may have different attributions as noted.</span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -204,7 +222,7 @@ export default function BlogPost() {
           <div className="relative max-w-7xl max-h-full p-4">
             <img
               src={post.images[selectedImageIndex]}
-              alt={`Gallery image ${selectedImageIndex + 1}`}
+              alt={galleryMetadataMap.get(post.images[selectedImageIndex])?.altText || `Gallery image ${selectedImageIndex + 1}`}
               className="max-w-full max-h-full object-contain"
               onClick={(e) => e.stopPropagation()}
             />
@@ -249,7 +267,9 @@ export default function BlogPost() {
               <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
                 <div className="flex items-center text-white text-sm">
                   <Camera className="w-4 h-4 mr-2" />
-                  <span>© 2024 Continued Education Blog</span>
+                  <span>
+                    {galleryMetadataMap.get(post.images[selectedImageIndex])?.photographer || 'Kate Goldenring'}
+                  </span>
                 </div>
               </div>
             </div>
