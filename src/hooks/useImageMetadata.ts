@@ -2,6 +2,18 @@ import { useState, useEffect } from 'react';
 import { imageService, ImageMetadata } from '../services/imageService';
 
 /**
+ * Check if an image URL is from Supabase Storage
+ */
+function isSupabaseStorageUrl(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.includes('supabase.co') && urlObj.pathname.includes('/storage/');
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Hook to fetch image metadata for a single image URL
  */
 export function useImageMetadata(imageUrl: string | null) {
@@ -11,6 +23,14 @@ export function useImageMetadata(imageUrl: string | null) {
 
   useEffect(() => {
     if (!imageUrl) {
+      setMetadata(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    // Skip fetching metadata for non-Supabase Storage URLs
+    if (!isSupabaseStorageUrl(imageUrl)) {
       setMetadata(null);
       setLoading(false);
       setError(null);
@@ -53,11 +73,21 @@ export function useImageMetadataMap(imageUrls: string[]) {
       return;
     }
 
+    // Filter to only include Supabase Storage URLs
+    const supabaseUrls = imageUrls.filter(isSupabaseStorageUrl);
+
+    if (supabaseUrls.length === 0) {
+      setMetadataMap(new Map());
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     const fetchMetadata = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await imageService.getImageMetadataByUrls(imageUrls);
+        const data = await imageService.getImageMetadataByUrls(supabaseUrls);
         setMetadataMap(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch image metadata');
