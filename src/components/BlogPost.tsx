@@ -59,13 +59,30 @@ export default function BlogPost() {
   };
 
   const navigateImage = (direction: 'prev' | 'next') => {
-    if (selectedImageIndex === null || !post.images) return;
+    if (selectedImageIndex === null || (!post.images && !post.imageUrl)) return;
     
-    const totalImages = post.images.length;
+    const totalImages = (post.images?.length || 0) + (post.imageUrl ? 1 : 0);
+    
     if (direction === 'prev') {
-      setSelectedImageIndex(selectedImageIndex === 0 ? totalImages - 1 : selectedImageIndex - 1);
+      if (selectedImageIndex === -1) {
+        // From main image, go to last additional image or stay at main if no additional images
+        setSelectedImageIndex(post.images && post.images.length > 0 ? post.images.length - 1 : -1);
+      } else if (selectedImageIndex === 0) {
+        // From first additional image, go to main image
+        setSelectedImageIndex(-1);
+      } else {
+        setSelectedImageIndex(selectedImageIndex - 1);
+      }
     } else {
-      setSelectedImageIndex(selectedImageIndex === totalImages - 1 ? 0 : selectedImageIndex + 1);
+      if (selectedImageIndex === -1) {
+        // From main image, go to first additional image or stay at main if no additional images
+        setSelectedImageIndex(post.images && post.images.length > 0 ? 0 : -1);
+      } else if (post.images && selectedImageIndex === post.images.length - 1) {
+        // From last additional image, go to main image
+        setSelectedImageIndex(-1);
+      } else {
+        setSelectedImageIndex(selectedImageIndex + 1);
+      }
     }
   };
 
@@ -156,11 +173,43 @@ export default function BlogPost() {
         </div>
 
         {/* Photo Gallery */}
-        {post.images && post.images.length > 0 && (
+        {(post.images && post.images.length > 0) || post.imageUrl && (
           <div className="mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-8">Photo Gallery</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {post.images.map((image, index) => {
+              {/* Main Image First */}
+              {post.imageUrl && (
+                <div
+                  className="group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-300 relative"
+                  onClick={() => openLightbox(-1)} // Use -1 to indicate main image
+                >
+                  <img
+                    src={post.imageUrl}
+                    alt={mainImageMetadata?.altText || post.title}
+                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  
+                  {/* Main Image Badge */}
+                  <div className="absolute top-3 left-3">
+                    <span className="bg-blue-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
+                      Main
+                    </span>
+                  </div>
+                  
+                  {/* Image Attribution Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <div className="flex items-center text-white text-xs">
+                        <Camera className="w-3 h-3 mr-1" />
+                        <span>{mainImagePhotographer}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Additional Images */}
+              {post.images && post.images.map((image, index) => {
                 const imageMetadata = galleryMetadataMap.get(image);
                 const isFlickr = isFlickrImageUrl(image);
                 
@@ -213,7 +262,7 @@ export default function BlogPost() {
       </article>
 
       {/* Lightbox Modal */}
-      {selectedImageIndex !== null && post.images && (
+      {selectedImageIndex !== null && (post.images || post.imageUrl) && (
         <div
           className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
           onClick={closeLightbox}
@@ -221,9 +270,13 @@ export default function BlogPost() {
           tabIndex={0}
         >
           <div className="relative max-w-7xl max-h-full p-4">
+            {/* Display main image if selectedImageIndex is -1, otherwise display gallery image */}
             <img
-              src={post.images[selectedImageIndex]}
-              alt={galleryMetadataMap.get(post.images[selectedImageIndex])?.altText || `Gallery image ${selectedImageIndex + 1}`}
+              src={selectedImageIndex === -1 ? post.imageUrl : post.images![selectedImageIndex]}
+              alt={selectedImageIndex === -1 
+                ? (mainImageMetadata?.altText || post.title)
+                : (galleryMetadataMap.get(post.images![selectedImageIndex])?.altText || `Gallery image ${selectedImageIndex + 1}`)
+              }
               className="max-w-full max-h-full object-contain"
               onClick={(e) => e.stopPropagation()}
             />
@@ -237,7 +290,7 @@ export default function BlogPost() {
             </button>
             
             {/* Navigation Arrows */}
-            {post.images.length > 1 && (
+            {((post.images?.length || 0) + (post.imageUrl ? 1 : 0)) > 1 && (
               <>
                 <button
                   onClick={(e) => {
@@ -263,14 +316,18 @@ export default function BlogPost() {
             {/* Image Counter and Attribution */}
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-center">
               <div className="text-white text-sm mb-2">
-                {selectedImageIndex + 1} of {post.images.length}
+                {selectedImageIndex === -1 ? 1 : selectedImageIndex + 2} of {(post.images?.length || 0) + (post.imageUrl ? 1 : 0)}
               </div>
               <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
                 <div className="flex items-center text-white text-sm">
                   <Camera className="w-4 h-4 mr-2" />
                   <span>
                     {(() => {
-                      const currentImage = post.images[selectedImageIndex];
+                      if (selectedImageIndex === -1) {
+                        return mainImagePhotographer;
+                      }
+                      
+                      const currentImage = post.images![selectedImageIndex];
                       const isFlickr = isFlickrImageUrl(currentImage);
                       
                       if (isFlickr) {
