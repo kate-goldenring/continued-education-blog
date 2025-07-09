@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, ChevronLeft, ChevronRight, X, Camera } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
 import { useImageMetadata, useImageMetadataMap } from '../hooks/useImageMetadata';
+import { isFlickrImageUrl } from '../utils/flickrUtils';
 
 export default function BlogPost() {
   const { id } = useParams<{ id: string }>();
@@ -75,7 +76,10 @@ export default function BlogPost() {
   };
 
   // Get photographer for main image
-  const mainImagePhotographer = mainImageMetadata?.photographer || 'Kate Goldenring';
+  const isMainImageFlickr = isFlickrImageUrl(post?.imageUrl || '');
+  const mainImagePhotographer = isMainImageFlickr 
+    ? 'Flickr'
+    : (mainImageMetadata?.photographer || 'Kate Goldenring');
 
   return (
     <div className="min-h-screen bg-white">
@@ -152,7 +156,10 @@ export default function BlogPost() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {post.images.map((image, index) => {
                 const imageMetadata = galleryMetadataMap.get(image);
-                const photographer = imageMetadata?.photographer || 'Kate Goldenring';
+                const isFlickr = isFlickrImageUrl(image);
+                const photographer = isFlickr 
+                  ? 'Flickr'
+                  : (imageMetadata?.photographer || 'Kate Goldenring');
                 
                 return (
                   <div
@@ -172,6 +179,11 @@ export default function BlogPost() {
                         <div className="flex items-center text-white text-xs">
                           <Camera className="w-3 h-3 mr-1" />
                           <span>{photographer}</span>
+                          {isFlickr && (
+                            <span className="ml-2 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
+                              Flickr
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -251,8 +263,19 @@ export default function BlogPost() {
                 <div className="flex items-center text-white text-sm">
                   <Camera className="w-4 h-4 mr-2" />
                   <span>
-                    {galleryMetadataMap.get(post.images[selectedImageIndex])?.photographer || 'Kate Goldenring'}
+                    {(() => {
+                      const currentImage = post.images[selectedImageIndex];
+                      const isFlickr = isFlickrImageUrl(currentImage);
+                      return isFlickr 
+                        ? 'Flickr'
+                        : (galleryMetadataMap.get(currentImage)?.photographer || 'Kate Goldenring');
+                    })()}
                   </span>
+                  {isFlickrImageUrl(post.images[selectedImageIndex]) && (
+                    <span className="ml-2 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
+                      Flickr
+                    </span>
+                  )}
                 </div>
               </div>
             </div>

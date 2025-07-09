@@ -5,7 +5,9 @@ import { useBlogPosts } from '../../hooks/useBlogPosts';
 import { BlogFormData } from '../../types/BlogPost';
 import ImageUpload from './ImageUpload';
 import ImageGallery from './ImageGallery';
+import ImageSourceSelector from './ImageSourceSelector';
 import { ImageUploadResult } from '../../services/imageService';
+import { isFlickrImageUrl } from '../../utils/flickrUtils';
 
 export default function PostForm() {
   const navigate = useNavigate();
@@ -23,10 +25,8 @@ export default function PostForm() {
   });
 
   const [showPreview, setShowPreview] = useState(false);
-  const [showImageGallery, setShowImageGallery] = useState(false);
-  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [showImageSelector, setShowImageSelector] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [selectingImageFor, setSelectingImageFor] = useState<'main' | number | null>(null);
   const [postLoaded, setPostLoaded] = useState(false);
@@ -111,25 +111,7 @@ export default function PostForm() {
     if (saveError) setSaveError(null);
   };
 
-  const handleImageUploaded = (result: ImageUploadResult) => {
-    setUploadError(null);
-    
-    // Update the form data based on what we're selecting for
-    if (selectingImageFor === 'main') {
-      setFormData(prev => ({ ...prev, imageUrl: result.publicUrl }));
-    } else if (typeof selectingImageFor === 'number') {
-      setFormData(prev => ({
-        ...prev,
-        images: prev.images.map((img, i) => i === selectingImageFor ? result.publicUrl : img)
-      }));
-    }
-    
-    // Close the upload modal and reset selection
-    setSelectingImageFor(null);
-    setShowImageUpload(false);
-  };
-
-  const handleImageSelected = (imageUrl: string) => {
+  const handleImageSelected = (imageUrl: string, metadata?: any) => {
     if (selectingImageFor === 'main') {
       setFormData(prev => ({ ...prev, imageUrl: imageUrl }));
     } else if (typeof selectingImageFor === 'number') {
@@ -140,7 +122,7 @@ export default function PostForm() {
     }
     
     setSelectingImageFor(null);
-    setShowImageGallery(false);
+    setShowImageSelector(false);
   };
 
   const addImage = () => {
@@ -171,19 +153,12 @@ export default function PostForm() {
 
   const openImageSelector = (target: 'main' | number) => {
     setSelectingImageFor(target);
-    setShowImageGallery(true);
-  };
-
-  const openImageUploader = (target: 'main' | number) => {
-    setSelectingImageFor(target);
-    setShowImageUpload(true);
+    setShowImageSelector(true);
   };
 
   const closeModals = () => {
-    setShowImageGallery(false);
-    setShowImageUpload(false);
+    setShowImageSelector(false);
     setSelectingImageFor(null);
-    setUploadError(null);
   };
 
   const renderPreview = () => {
@@ -390,18 +365,10 @@ export default function PostForm() {
                     <button
                       type="button"
                       onClick={() => openImageSelector('main')}
-                      className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 transition-colors duration-200"
-                      title="Select from gallery"
-                    >
-                      <ImageIcon className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openImageUploader('main')}
                       className="px-3 py-2 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 transition-colors duration-200"
-                      title="Upload new image"
+                      title="Select image source"
                     >
-                      <Upload className="w-4 h-4" />
+                      <Plus className="w-4 h-4" />
                     </button>
                   </div>
                   {formData.imageUrl && (
@@ -411,6 +378,11 @@ export default function PostForm() {
                         alt="Main image preview"
                         className="w-full h-full object-cover"
                       />
+                      {isFlickrImageUrl(formData.imageUrl) && (
+                        <div className="absolute top-1 right-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
+                          Flickr
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -465,18 +437,10 @@ export default function PostForm() {
                           <button
                             type="button"
                             onClick={() => openImageSelector(index)}
-                            className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 transition-colors duration-200"
-                            title="Select from gallery"
-                          >
-                            <ImageIcon className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openImageUploader(index)}
                             className="px-3 py-2 bg-blue-100 border border-blue-300 rounded-md hover:bg-blue-200 transition-colors duration-200"
-                            title="Upload new image"
+                            title="Select image source"
                           >
-                            <Upload className="w-4 h-4" />
+                            <Plus className="w-4 h-4" />
                           </button>
                         </div>
                         <button
@@ -496,6 +460,11 @@ export default function PostForm() {
                             alt={`Preview ${index + 1}`}
                             className="w-full h-full object-cover"
                           />
+                          {isFlickrImageUrl(image) && (
+                            <div className="absolute top-1 right-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
+                              Flickr
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -545,59 +514,13 @@ export default function PostForm() {
         )}
       </div>
 
-      {/* Image Gallery Modal */}
-      {showImageGallery && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-6xl max-h-full overflow-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Select Image</h3>
-                <button
-                  onClick={closeModals}
-                  className="p-2 hover:bg-gray-100 rounded-full"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <ImageGallery
-                onImageSelect={handleImageSelected}
-                showSelectButton={true}
-                className="max-h-96 overflow-y-auto"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Image Upload Modal */}
-      {showImageUpload && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Upload Image</h3>
-                <button
-                  onClick={closeModals}
-                  className="p-2 hover:bg-gray-100 rounded-full"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {uploadError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-                  <p className="text-red-700 text-sm">{uploadError}</p>
-                </div>
-              )}
-
-              <ImageUpload
-                onImageUploaded={handleImageUploaded}
-                onError={setUploadError}
-                folder="blog-posts"
-              />
-            </div>
-          </div>
-        </div>
+      {/* Image Source Selector Modal */}
+      {showImageSelector && (
+        <ImageSourceSelector
+          onImageSelected={handleImageSelected}
+          onCancel={closeModals}
+          title={`Select Image ${selectingImageFor === 'main' ? '(Main)' : `#${(selectingImageFor as number) + 1}`}`}
+        />
       )}
     </div>
   );
