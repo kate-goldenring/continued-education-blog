@@ -9,6 +9,7 @@ export interface DatabaseBlogPost {
   images: string[];
   excerpt: string;
   content: string;
+  image_metadata?: any; // Store additional metadata like Flickr info
   read_time: string;
   created_at: string;
   updated_at: string;
@@ -28,6 +29,7 @@ class BlogService {
       images: dbPost.images || [],
       excerpt: dbPost.excerpt,
       content: dbPost.content,
+      imageMetadata: dbPost.image_metadata,
       readTime: dbPost.read_time,
       date: new Date(dbPost.created_at).toISOString().split('T')[0]
     };
@@ -43,7 +45,8 @@ class BlogService {
       image_url: appPost.imageUrl,
       images: appPost.images || [],
       excerpt: appPost.excerpt,
-      content: appPost.content
+      content: appPost.content,
+      image_metadata: appPost.imageMetadata
     };
   }
 

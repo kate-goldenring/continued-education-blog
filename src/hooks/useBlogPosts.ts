@@ -93,7 +93,13 @@ export function useBlogPosts() {
   // Memoize getBlogPost to prevent unnecessary re-renders
   const getBlogPost = useCallback((id: string): BlogPost | undefined => {
     const post = blogPosts.find(post => post.id === id);
-    console.log('Getting blog post with ID:', id, 'found:', !!post);
+    if (post) {
+      console.log('Getting blog post with ID:', id, 'found:', !!post);
+      // Ensure imageMetadata is available for proper attribution
+      if (post.imageMetadata) {
+        console.log('Post has image metadata for attribution');
+      }
+    }
     return post;
   }, [blogPosts]);
 

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, ChevronLeft, ChevronRight, X, Camera } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
 import { useImageMetadata, useImageMetadataMap } from '../hooks/useImageMetadata';
-import { isFlickrImageUrl } from '../utils/flickrUtils';
+import { isFlickrImageUrl, getFlickrPhotographerName } from '../utils/flickrUtils';
 
 export default function BlogPost() {
   const { id } = useParams<{ id: string }>();
@@ -77,9 +77,15 @@ export default function BlogPost() {
 
   // Get photographer for main image
   const isMainImageFlickr = isFlickrImageUrl(post?.imageUrl || '');
-  const mainImagePhotographer = isMainImageFlickr 
-    ? 'Flickr'
-    : (mainImageMetadata?.photographer || 'Kate Goldenring');
+  
+  let mainImagePhotographer = 'Kate Goldenring';
+  if (isMainImageFlickr) {
+    // Get photographer info from stored metadata if available
+    const flickrMetadata = post?.imageMetadata?.[post.imageUrl];
+    mainImagePhotographer = flickrMetadata?.photographer || 'Flickr User';
+  } else if (mainImageMetadata?.photographer) {
+    mainImagePhotographer = mainImageMetadata.photographer;
+  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -157,9 +163,14 @@ export default function BlogPost() {
               {post.images.map((image, index) => {
                 const imageMetadata = galleryMetadataMap.get(image);
                 const isFlickr = isFlickrImageUrl(image);
-                const photographer = isFlickr 
-                  ? 'Flickr'
-                  : (imageMetadata?.photographer || 'Kate Goldenring');
+                
+                let photographer = 'Kate Goldenring';
+                if (isFlickr) {
+                  const flickrMetadata = post.imageMetadata?.[image];
+                  photographer = flickrMetadata?.photographer || 'Flickr User';
+                } else if (imageMetadata?.photographer) {
+                  photographer = imageMetadata.photographer;
+                }
                 
                 return (
                   <div
@@ -180,7 +191,7 @@ export default function BlogPost() {
                           <Camera className="w-3 h-3 mr-1" />
                           <span>{photographer}</span>
                           {isFlickr && (
-                            <span className="ml-2 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
+                            <span className="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
                               Flickr
                             </span>
                           )}
@@ -266,13 +277,16 @@ export default function BlogPost() {
                     {(() => {
                       const currentImage = post.images[selectedImageIndex];
                       const isFlickr = isFlickrImageUrl(currentImage);
-                      return isFlickr 
-                        ? 'Flickr'
-                        : (galleryMetadataMap.get(currentImage)?.photographer || 'Kate Goldenring');
+                      
+                      if (isFlickr) {
+                        const flickrMetadata = post.imageMetadata?.[currentImage];
+                        return flickrMetadata?.photographer || 'Flickr User';
+                      }
+                      return galleryMetadataMap.get(currentImage)?.photographer || 'Kate Goldenring';
                     })()}
                   </span>
                   {isFlickrImageUrl(post.images[selectedImageIndex]) && (
-                    <span className="ml-2 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
+                    <span className="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
                       Flickr
                     </span>
                   )}

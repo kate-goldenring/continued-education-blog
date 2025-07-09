@@ -2,7 +2,7 @@ import React from 'react';
 import { Camera } from 'lucide-react';
 import { BlogPost } from '../types/BlogPost';
 import { useImageMetadata } from '../hooks/useImageMetadata';
-import { isFlickrImageUrl } from '../utils/flickrUtils';
+import { isFlickrImageUrl, getFlickrPhotographerName } from '../utils/flickrUtils';
 
 interface PhotoCardProps {
   post: BlogPost;
@@ -14,9 +14,15 @@ export default function PhotoCard({ post, onClick }: PhotoCardProps) {
   
   // Determine photographer based on image source
   const isFlickr = isFlickrImageUrl(post.imageUrl);
-  const photographer = isFlickr 
-    ? 'Flickr' // For Flickr images, we'll show "Flickr" as the source
-    : (metadata?.photographer || 'Kate Goldenring');
+  
+  let photographer = 'Kate Goldenring';
+  if (isFlickr) {
+    // Get photographer info from stored metadata if available
+    const flickrMetadata = post.imageMetadata?.[post.imageUrl];
+    photographer = flickrMetadata?.photographer || 'Flickr User';
+  } else if (metadata?.photographer) {
+    photographer = metadata.photographer;
+  }
 
   return (
     <div 
@@ -51,7 +57,7 @@ export default function PhotoCard({ post, onClick }: PhotoCardProps) {
                 <Camera className="w-3 h-3 mr-1" />
                 <span>{photographer}</span>
                 {isFlickr && (
-                  <span className="ml-2 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
+                  <span className="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
                     Flickr
                   </span>
                 )}

@@ -4,7 +4,7 @@ import ImageUpload from './ImageUpload';
 import ImageGallery from './ImageGallery';
 import FlickrImageInput from './FlickrImageInput';
 import { ImageUploadResult } from '../../services/imageService';
-import { FlickrImageData } from '../../utils/flickrUtils';
+import { FlickrImageData, getFlickrPhotographerName } from '../../utils/flickrUtils';
 
 interface ImageSourceSelectorProps {
   onImageSelected: (imageUrl: string, metadata?: any) => void;
@@ -38,6 +38,8 @@ export default function ImageSourceSelector({
   const handleFlickrImageSelected = (imageUrl: string, flickrData?: FlickrImageData) => {
     onImageSelected(imageUrl, {
       type: 'flickr',
+      photographer: flickrData ? getFlickrPhotographerName(flickrData) : 'Flickr User',
+      flickrData,
       ...flickrData
     });
   };

@@ -31,6 +31,7 @@ export default function PostForm() {
   const [selectingImageFor, setSelectingImageFor] = useState<'main' | number | null>(null);
   const [postLoaded, setPostLoaded] = useState(false);
   const [postNotFound, setPostNotFound] = useState(false);
+  const [imageMetadata, setImageMetadata] = useState<Record<string, any>>({});
 
   // Load post data for editing - only run when loading is complete
   useEffect(() => {
@@ -45,8 +46,10 @@ export default function PostForm() {
           imageUrl: post.imageUrl,
           images: post.images || [],
           excerpt: post.excerpt,
-          content: post.content
+          content: post.content,
+          imageMetadata: post.imageMetadata || {}
         });
+        setImageMetadata(post.imageMetadata || {});
         setPostLoaded(true);
         setPostNotFound(false);
       } else {
@@ -114,11 +117,19 @@ export default function PostForm() {
   const handleImageSelected = (imageUrl: string, metadata?: any) => {
     if (selectingImageFor === 'main') {
       setFormData(prev => ({ ...prev, imageUrl: imageUrl }));
+      if (metadata) {
+        setImageMetadata(prev => ({ ...prev, [imageUrl]: metadata }));
+        setFormData(prev => ({ ...prev, imageMetadata: { ...prev.imageMetadata, [imageUrl]: metadata } }));
+      }
     } else if (typeof selectingImageFor === 'number') {
       setFormData(prev => ({
         ...prev,
         images: prev.images.map((img, i) => i === selectingImageFor ? imageUrl : img)
       }));
+      if (metadata) {
+        setImageMetadata(prev => ({ ...prev, [imageUrl]: metadata }));
+        setFormData(prev => ({ ...prev, imageMetadata: { ...prev.imageMetadata, [imageUrl]: metadata } }));
+      }
     }
     
     setSelectingImageFor(null);
@@ -380,7 +391,7 @@ export default function PostForm() {
                       />
                       {isFlickrImageUrl(formData.imageUrl) && (
                         <div className="absolute top-1 right-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
-                          Flickr
+                          {imageMetadata[formData.imageUrl]?.photographer || 'Flickr'}
                         </div>
                       )}
                     </div>
@@ -462,7 +473,7 @@ export default function PostForm() {
                           />
                           {isFlickrImageUrl(image) && (
                             <div className="absolute top-1 right-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
-                              Flickr
+                              {imageMetadata[image]?.photographer || 'Flickr'}
                             </div>
                           )}
                         </div>

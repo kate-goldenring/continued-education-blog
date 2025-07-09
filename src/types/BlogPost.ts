@@ -8,6 +8,7 @@ export interface BlogPost {
   content: string;
   date: string;
   readTime: string;
+  imageMetadata?: any; // Store Flickr or other image metadata
 }
 
 export type Category = 'all' | 'hiking' | 'travel' | 'food' | 'mountaineering' | 'lifestyle';
@@ -19,4 +20,5 @@ export interface BlogFormData {
   images: string[];
   excerpt: string;
   content: string;
+  imageMetadata?: any; // Store Flickr or other image metadata
 }
