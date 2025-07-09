@@ -9,7 +9,7 @@ import { isFlickrImageUrl } from '../utils/flickrUtils';
 export default function BlogPost() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getBlogPost } = useBlogPosts();
+  const { getBlogPost, loading } = useBlogPosts();
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   
   const post = getBlogPost(id || '');
@@ -44,11 +44,25 @@ export default function BlogPost() {
     return map;
   }, [galleryMetadataMap, post?.imageUrl, mainImageMetadata]);
 
+  // Show loading state while posts are being fetched
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading post...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Only show "Post not found" after loading is complete and post is still null
   if (!post) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Post not found</h1>
+          <p className="text-gray-600 mb-4">The post you're looking for doesn't exist or may have been removed.</p>
           <button
             onClick={() => navigate('/')}
             className="text-blue-600 hover:text-blue-800 font-medium"
