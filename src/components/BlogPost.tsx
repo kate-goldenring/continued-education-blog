@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, ChevronLeft, ChevronRight, X, Camera } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
 import { useImageMetadata, useImageMetadataMap } from '../hooks/useImageMetadata';
-import { isFlickrImageUrl, getFlickrPhotographerName } from '../utils/flickrUtils';
+import { isFlickrImageUrl } from '../utils/flickrUtils';
 
 export default function BlogPost() {
   const { id } = useParams<{ id: string }>();

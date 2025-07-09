@@ -5,8 +5,7 @@
 export interface FlickrImageData {
   photoId: string;
   userId: string;
-  username?: string;
-  realName?: string;
+  photographer: string; // User-provided photographer name
   albumId?: string;
   title: string;
   imageUrl: string;
@@ -50,13 +49,10 @@ export function parseFlickrEmbed(embedHtml: string): FlickrImageData | null {
     
     const userId = photoMatch[1];
     
-    // Try to extract username from URL (if it's not a numeric ID)
-    const username = userId.match(/^\d+@N\d+$/) ? undefined : userId;
-    
     return {
       photoId: photoMatch[2],
       userId,
-      username,
+      photographer: '', // Will be set by user input
       albumId: albumMatch ? albumMatch[1] : undefined,
       title,
       imageUrl: src,
@@ -70,23 +66,6 @@ export function parseFlickrEmbed(embedHtml: string): FlickrImageData | null {
     console.error('Error parsing Flickr embed:', error);
     return null;
   }
-}
-
-/**
- * Get photographer display name from Flickr data
- */
-export function getFlickrPhotographerName(data: FlickrImageData): string {
-  if (data.realName) {
-    return data.realName;
-  }
-  if (data.username) {
-    return data.username;
-  }
-  // If we only have a numeric user ID, show a generic attribution
-  if (data.userId.match(/^\d+@N\d+$/)) {
-    return 'Flickr User';
-  }
-  return data.userId;
 }
 
 /**

@@ -2,7 +2,7 @@ import React from 'react';
 import { Camera } from 'lucide-react';
 import { BlogPost } from '../types/BlogPost';
 import { useImageMetadata } from '../hooks/useImageMetadata';
-import { isFlickrImageUrl, getFlickrPhotographerName } from '../utils/flickrUtils';
+import { isFlickrImageUrl } from '../utils/flickrUtils';
 
 interface PhotoCardProps {
   post: BlogPost;

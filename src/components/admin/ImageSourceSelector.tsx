@@ -38,7 +38,7 @@ export default function ImageSourceSelector({
   const handleFlickrImageSelected = (imageUrl: string, flickrData?: FlickrImageData) => {
     onImageSelected(imageUrl, {
       type: 'flickr',
-      photographer: flickrData ? getFlickrPhotographerName(flickrData) : 'Flickr User',
+      photographer: flickrData?.photographer || 'Flickr User',
       flickrData,
       ...flickrData
     });
