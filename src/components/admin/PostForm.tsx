@@ -389,11 +389,6 @@ export default function PostForm() {
                         alt="Main image preview"
                         className="w-full h-full object-cover"
                       />
-                      {isFlickrImageUrl(formData.imageUrl) && (
-                        <div className="absolute top-1 right-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
-                          {imageMetadata[formData.imageUrl]?.photographer || 'Flickr'}
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -471,11 +466,6 @@ export default function PostForm() {
                             alt={`Preview ${index + 1}`}
                             className="w-full h-full object-cover"
                           />
-                          {isFlickrImageUrl(image) && (
-                            <div className="absolute top-1 right-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
-                              {imageMetadata[image]?.photographer || 'Flickr'}
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>

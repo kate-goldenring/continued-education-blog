@@ -56,11 +56,6 @@ export default function PhotoCard({ post, onClick }: PhotoCardProps) {
               <div className="flex items-center text-xs text-gray-300">
                 <Camera className="w-3 h-3 mr-1" />
                 <span>{photographer}</span>
-                {isFlickr && (
-                  <span className="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
-                    Flickr
-                  </span>
-                )}
               </div>
             </div>
           </div>

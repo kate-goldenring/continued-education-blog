@@ -190,11 +190,6 @@ export default function BlogPost() {
                         <div className="flex items-center text-white text-xs">
                           <Camera className="w-3 h-3 mr-1" />
                           <span>{photographer}</span>
-                          {isFlickr && (
-                            <span className="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
-                              Flickr
-                            </span>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -285,11 +280,6 @@ export default function BlogPost() {
                       return galleryMetadataMap.get(currentImage)?.photographer || 'Kate Goldenring';
                     })()}
                   </span>
-                  {isFlickrImageUrl(post.images[selectedImageIndex]) && (
-                    <span className="ml-1 bg-blue-600 text-white text-xs px-1 py-0.5 rounded">
-                      Flickr
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
