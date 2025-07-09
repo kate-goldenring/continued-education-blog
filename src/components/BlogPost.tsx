@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, ChevronLeft, ChevronRight, X, Camera } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
@@ -15,16 +16,33 @@ export default function BlogPost() {
 
   // Get metadata for the main image
   const { metadata: mainImageMetadata } = useImageMetadata(post?.imageUrl || null);
-  const images = post?.images || [];
+  
+  // Create a stable images array that includes the main image
+  const images = useMemo(() => {
+    if (!post) return [];
+    
+    const additionalImages = post.images || [];
+    const allImages = [...additionalImages];
+    
+    // Add main image to gallery if it exists and isn't already included
+    if (post.imageUrl && !allImages.includes(post.imageUrl)) {
+      allImages.push(post.imageUrl);
+    }
+    
+    return allImages;
+  }, [post?.imageUrl, post?.images]);
 
   // Get metadata for all gallery images
-  const { metadataMap: galleryMetadataMap } = useImageMetadataMap(images || []);
-
-  // Add main image to the gallery
-  if (mainImageMetadata !== null) {
-    galleryMetadataMap.set(post!.imageUrl, mainImageMetadata);
-    images.push(post!.imageUrl);
-  }
+  const { metadataMap: galleryMetadataMap } = useImageMetadataMap(images);
+  
+  // Add main image metadata to the map if available
+  const finalMetadataMap = useMemo(() => {
+    const map = new Map(galleryMetadataMap);
+    if (post?.imageUrl && mainImageMetadata) {
+      map.set(post.imageUrl, mainImageMetadata);
+    }
+    return map;
+  }, [galleryMetadataMap, post?.imageUrl, mainImageMetadata]);
 
   if (!post) {
     return (
@@ -168,7 +186,7 @@ export default function BlogPost() {
             <h2 className="text-3xl font-bold text-gray-900 mb-8">Photo Gallery</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {images.map((image, index) => {
-                const imageMetadata = galleryMetadataMap.get(image);
+                const imageMetadata = finalMetadataMap.get(image);
                 const isFlickr = isFlickrImageUrl(image);
                 
                 let photographer = 'Kate Goldenring';
@@ -230,7 +248,7 @@ export default function BlogPost() {
           <div className="relative max-w-7xl max-h-full p-4">
             <img
               src={images[selectedImageIndex]}
-              alt={galleryMetadataMap.get(images[selectedImageIndex])?.altText || `Gallery image ${selectedImageIndex + 1}`}
+              alt={finalMetadataMap.get(images[selectedImageIndex])?.altText || `Gallery image ${selectedImageIndex + 1}`}
               className="max-w-full max-h-full object-contain"
               onClick={(e) => e.stopPropagation()}
             />
@@ -284,7 +302,7 @@ export default function BlogPost() {
                         const flickrMetadata = post.imageMetadata?.[currentImage];
                         return flickrMetadata?.photographer || 'Flickr User';
                       }
-                      return galleryMetadataMap.get(currentImage)?.photographer || 'Kate Goldenring';
+                      return finalMetadataMap.get(currentImage)?.photographer || 'Kate Goldenring';
                     })()}
                   </span>
                 </div>
