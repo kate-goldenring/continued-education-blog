@@ -3,28 +3,6 @@ import { Resend } from 'resend';
 const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
 
 // Resend Audience ID - you'll need to create this in your Resend dashboard
-                placeholder="First name"
-                disabled={isSubmitting}
-                className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-              />
-            </div>
-            <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
-                Last Name (optional)
-              </label>
-              <input
-                type="text"
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Last name"
-                disabled={isSubmitting}
-                className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
-              />
-            </div>
-// Resend Audience ID - you'll need to create this in your Resend dashboard
-const AUDIENCE_ID = import.meta.env.VITE_RESEND_AUDIENCE_ID || 'your-audience-id';
-
 export interface EmailNotificationData {
   postId: string;
   postTitle: string;
@@ -32,226 +10,72 @@ export interface EmailNotificationData {
   postUrl: string;
 }
 
-export interface ResendContact {
+export interface Subscriber {
   id: string;
   email: string;
-  firstName?: string;
-  lastName?: string;
-  createdAt: string;
-  unsubscribed: boolean;
-}
-
-export interface ResendAudience {
-  id: string;
-  name: string;
+  unsubscribeToken: string;
 }
 
 class EmailService {
   /**
-   * Create an audience in Resend (one-time setup)
+   * Send new post notification to all subscribers
    */
-  async createAudience(name: string): Promise<{ success: boolean; audienceId?: string; error?: string }> {
-    if (!import.meta.env.VITE_RESEND_API_KEY) {
-      return { success: false, error: 'Resend API key not configured' };
-    }
-
-    try {
-      const response = await resend.audiences.create({ name });
-      return { success: true, audienceId: response.data?.id };
-    } catch (error) {
-      console.error('Failed to create audience:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to create audience' 
-      };
-    }
-  }
-
-  /**
-   * Add a contact to the Resend audience
-   */
-  async addContact(email: string, firstName?: string, lastName?: string): Promise<{ success: boolean; contactId?: string; error?: string }> {
-    if (!import.meta.env.VITE_RESEND_API_KEY) {
-      return { success: false, error: 'Resend API key not configured' };
-    }
-
-    if (!AUDIENCE_ID || AUDIENCE_ID === 'your-audience-id') {
-      return { success: false, error: 'Resend Audience ID not configured' };
-    }
-
-    try {
-      const response = await resend.contacts.create({
-        email: email.toLowerCase().trim(),
-        firstName,
-        lastName,
-        unsubscribed: false,
-        audienceId: AUDIENCE_ID
-      });
-
-      return { success: true, contactId: response.data?.id };
-    } catch (error: any) {
-      console.error('Failed to add contact:', error);
-      
-      // Handle duplicate email error
-      if (error?.message?.includes('already exists') || error?.message?.includes('duplicate')) {
-        return { success: false, error: 'This email is already subscribed to our newsletter.' };
-      }
-      
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to add contact' 
-      };
-    }
-  }
-
-  /**
-   * Remove a contact from the audience (unsubscribe)
-   */
-  async removeContact(contactId: string): Promise<{ success: boolean; error?: string }> {
-    if (!import.meta.env.VITE_RESEND_API_KEY) {
-      return { success: false, error: 'Resend API key not configured' };
-    }
-
-    try {
-      await resend.contacts.remove({ 
-        id: contactId,
-        audienceId: AUDIENCE_ID 
-      });
-      return { success: true };
-    } catch (error) {
-      console.error('Failed to remove contact:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to remove contact' 
-      };
-    }
-  }
-
-  /**
-   * Update contact subscription status
-   */
-  async updateContactSubscription(contactId: string, unsubscribed: boolean): Promise<{ success: boolean; error?: string }> {
-    if (!import.meta.env.VITE_RESEND_API_KEY) {
-      return { success: false, error: 'Resend API key not configured' };
-    }
-
-    try {
-      await resend.contacts.update({
-        id: contactId,
-        audienceId: AUDIENCE_ID,
-        unsubscribed
-      });
-      return { success: true };
-    } catch (error) {
-      console.error('Failed to update contact:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to update contact' 
-      };
-    }
-  }
-
-  /**
-   * Get all contacts from the audience
-   */
-  async getAllContacts(): Promise<{ success: boolean; contacts?: ResendContact[]; error?: string }> {
-    if (!import.meta.env.VITE_RESEND_API_KEY) {
-      return { success: false, error: 'Resend API key not configured' };
-    }
-
-    if (!AUDIENCE_ID || AUDIENCE_ID === 'your-audience-id') {
-      return { success: false, error: 'Resend Audience ID not configured' };
-    }
-
-    try {
-      const response = await resend.contacts.list({ audienceId: AUDIENCE_ID });
-      
-      const contacts: ResendContact[] = response.data?.data?.map((contact: any) => ({
-        id: contact.id,
-        email: contact.email,
-        firstName: contact.first_name,
-        lastName: contact.last_name,
-        createdAt: contact.created_at,
-        unsubscribed: contact.unsubscribed
-      })) || [];
-
-      return { success: true, contacts };
-    } catch (error) {
-      console.error('Failed to get contacts:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to get contacts' 
-      };
-    }
-  }
-
-  /**
-   * Get contact by email
-   */
-  async getContactByEmail(email: string): Promise<{ success: boolean; contact?: ResendContact; error?: string }> {
-    const result = await this.getAllContacts();
-    
-    if (!result.success || !result.contacts) {
-      return { success: false, error: result.error };
-    }
-
-    const contact = result.contacts.find(c => c.email.toLowerCase() === email.toLowerCase());
-    
-    if (!contact) {
-      return { success: false, error: 'Contact not found' };
-    }
-
-    return { success: true, contact };
-  }
-
-  /**
-   * Send new post notification to all subscribers using Resend Broadcast
-   */
-  async sendPostNotification(postData: EmailNotificationData): Promise<{ success: boolean; sentCount: number; errors: string[] }> {
+  async sendPostNotification(
+    subscribers: Subscriber[], 
+    postData: EmailNotificationData
+  ): Promise<{ success: boolean; sentCount: number; errors: string[] }> {
     if (!import.meta.env.VITE_RESEND_API_KEY) {
       console.warn('Resend API key not configured. Email notifications disabled.');
       return { success: false, sentCount: 0, errors: ['Resend API key not configured'] };
     }
 
-    if (!AUDIENCE_ID || AUDIENCE_ID === 'your-audience-id') {
-      console.warn('Resend Audience ID not configured. Email notifications disabled.');
-      return { success: false, sentCount: 0, errors: ['Resend Audience ID not configured'] };
-    }
+    const errors: string[] = [];
+    let sentCount = 0;
 
-    try {
-      // Send broadcast email to the entire audience
-      const response = await resend.broadcasts.send({
-        from: 'Continued Education <noreply@yourdomain.com>', // Update with your verified domain
-        subject: `New Post: ${postData.postTitle}`,
-        html: this.generateEmailTemplate(postData),
-        audienceId: AUDIENCE_ID
+    // Send emails in batches to avoid rate limits
+    const batchSize = 10;
+    for (let i = 0; i < subscribers.length; i += batchSize) {
+      const batch = subscribers.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(async (subscriber) => {
+        try {
+          const unsubscribeUrl = `${window.location.origin}/unsubscribe?token=${subscriber.unsubscribeToken}`;
+          
+          await resend.emails.send({
+            from: 'Continued Education <noreply@yourdomain.com>', // Update with your domain
+            to: subscriber.email,
+            subject: `New Post: ${postData.postTitle}`,
+            html: this.generateEmailTemplate(postData, unsubscribeUrl)
+          });
+          
+          sentCount++;
+          console.log(`Email sent successfully to: ${subscriber.email}`);
+        } catch (error) {
+          const errorMessage = `Failed to send to ${subscriber.email}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+          console.error(errorMessage);
+          errors.push(errorMessage);
+        }
       });
 
-      console.log('Broadcast email sent successfully:', response.data?.id);
+      await Promise.all(batchPromises);
       
-      // Get subscriber count for reporting
-      const contactsResult = await this.getAllContacts();
-      const activeSubscribers = contactsResult.contacts?.filter(c => !c.unsubscribed).length || 0;
-
-      return {
-        success: true,
-        sentCount: activeSubscribers,
-        errors: []
-      };
-    } catch (error) {
-      console.error('Failed to send broadcast email:', error);
-      return {
-        success: false,
-        sentCount: 0,
-        errors: [error instanceof Error ? error.message : 'Failed to send broadcast email']
-      };
+      // Small delay between batches to respect rate limits
+      if (i + batchSize < subscribers.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
     }
+
+    return {
+      success: errors.length === 0,
+      sentCount,
+      errors
+    };
   }
 
   /**
    * Generate HTML email template
    */
-  private generateEmailTemplate(postData: EmailNotificationData): string {
+  private generateEmailTemplate(postData: EmailNotificationData, unsubscribeUrl: string): string {
     return `
       <!DOCTYPE html>
       <html>
@@ -358,7 +182,34 @@ class EmailService {
             <p>You're receiving this because you subscribed to our blog updates.</p>
             <div class="unsubscribe">
               Don't want to receive these emails? 
-              <a href="{{unsubscribe}}">Unsubscribe here</a>
+              <a href="${unsubscribeUrl}">Unsubscribe here</a>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
+                First Name (optional)
+              </label>
+              <input
+                type="text"
+                id="firstName"
+                placeholder="First name"
+                disabled={isSubmitting}
+                className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                Last Name (optional)
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                placeholder="Last name"
+                disabled={isSubmitting}
+                className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+              />
             </div>
           </div>
         </div>
@@ -391,31 +242,8 @@ class EmailService {
       };
     }
   }
-
-  /**
-   * Get subscription statistics
-   */
-  async getSubscriptionStats(): Promise<{
-    totalSubscribers: number;
-    activeSubscribers: number;
-  }> {
-    const result = await this.getAllContacts();
-    
-    if (!result.success || !result.contacts) {
-      return {
-        totalSubscribers: 0,
-        activeSubscribers: 0
-      };
-    }
-
-    const totalSubscribers = result.contacts.length;
-    const activeSubscribers = result.contacts.filter(c => !c.unsubscribed).length;
-
-    return {
-      totalSubscribers,
-      activeSubscribers
-    };
-  }
 }
 
 export const emailService = new EmailService();
+
+export default emailService

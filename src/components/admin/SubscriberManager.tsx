@@ -3,7 +3,6 @@ import { Resend } from 'resend';
 const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
 
 // Resend Audience ID - you'll need to create this in your Resend dashboard
-// Resend Audience ID - you'll need to create this in your Resend dashboard
 const AUDIENCE_ID = import.meta.env.VITE_RESEND_AUDIENCE_ID || 'your-audience-id';
 
 export interface EmailNotificationData {
@@ -400,3 +399,5 @@ class EmailService {
 }
 
 export const emailService = new EmailService();
+
+export default emailService
