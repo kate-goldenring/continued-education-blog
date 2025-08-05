@@ -3,6 +3,9 @@ import { Resend } from 'resend';
 const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
 
 // Resend Audience ID - you'll need to create this in your Resend dashboard
+// Resend Audience ID - you'll need to create this in your Resend dashboard
+// Resend Audience ID - you'll need to create this in your Resend dashboard
+// Resend Audience ID - you'll need to create this in your Resend dashboard
 const AUDIENCE_ID = import.meta.env.VITE_RESEND_AUDIENCE_ID || 'your-audience-id';
 
 export interface EmailNotificationData {
@@ -204,7 +207,11 @@ class EmailService {
         from: 'Continued Education <noreply@yourdomain.com>', // Update with your verified domain
         subject: `New Post: ${postData.postTitle}`,
         html: this.generateEmailTemplate(postData),
-        audienceId: AUDIENCE_ID
+        audienceId: AUDIENCE_ID,
+        headers: {
+          'List-Unsubscribe': '<https://resend.com/unsubscribe>',
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+        }
       });
 
       console.log('Broadcast email sent successfully:', response.data?.id);
@@ -336,10 +343,6 @@ class EmailService {
           <div class="footer">
             <p>Thank you for subscribing to Continued Education!</p>
             <p>You're receiving this because you subscribed to our blog updates.</p>
-            <div class="unsubscribe">
-              Don't want to receive these emails? 
-              <a href="{{unsubscribe}}">Unsubscribe here</a>
-            </div>
           </div>
         </div>
       </body>
@@ -360,7 +363,11 @@ class EmailService {
         from: 'Continued Education <noreply@yourdomain.com>', // Update with your domain
         to: 'test@example.com',
         subject: 'Test Email Configuration',
-        html: '<p>This is a test email to verify Resend configuration.</p>'
+        html: '<p>This is a test email to verify Resend configuration.</p>',
+        headers: {
+          'List-Unsubscribe': '<https://resend.com/unsubscribe>',
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+        }
       });
       
       return { success: true };
