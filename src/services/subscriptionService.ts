@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { emailService } from './emailService';
 
 export interface SubscriptionResult {
   success: boolean;
@@ -117,6 +118,55 @@ class SubscriptionService {
     } catch (error) {
       console.error('Error fetching subscribers:', error);
       return [];
+    }
+  }
+
+  /**
+   * Send notification emails to all subscribers when a new post is created
+   */
+  async notifySubscribersOfNewPost(postData: {
+    id: string;
+    title: string;
+    excerpt: string;
+  }): Promise<{ success: boolean; sentCount: number; errors: string[] }> {
+    try {
+      // Get all active subscribers
+      const { data: subscribers, error } = await supabase
+        .from('email_subscribers')
+        .select('id, email, unsubscribe_token')
+        .eq('is_active', true);
+
+      if (error) {
+        throw new Error(`Failed to fetch subscribers: ${error.message}`);
+      }
+
+      if (!subscribers || subscribers.length === 0) {
+        return { success: true, sentCount: 0, errors: [] };
+      }
+
+      // Send emails using Resend
+      const result = await emailService.sendPostNotification(
+        subscribers.map(sub => ({
+          id: sub.id,
+          email: sub.email,
+          unsubscribeToken: sub.unsubscribe_token
+        })),
+        {
+          postId: postData.id,
+          postTitle: postData.title,
+          postExcerpt: postData.excerpt,
+          postUrl: `/post/${postData.id}`
+        }
+      );
+
+      return result;
+    } catch (error) {
+      console.error('Error notifying subscribers:', error);
+      return {
+        success: false,
+        sentCount: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error']
+      };
     }
   }
 

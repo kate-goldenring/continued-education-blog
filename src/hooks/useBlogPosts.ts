@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BlogPost, BlogFormData } from '../types/BlogPost';
 import { blogService } from '../services/blogService';
+import { subscriptionService } from '../services/subscriptionService';
 
 export function useBlogPosts() {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
@@ -39,6 +40,25 @@ export function useBlogPosts() {
       
       const newPost = await blogService.createPost(postData);
       console.log('Created new post with ID:', newPost.id);
+      
+      // Send email notifications to subscribers
+      try {
+        console.log('Sending email notifications to subscribers...');
+        const emailResult = await subscriptionService.notifySubscribersOfNewPost({
+          id: newPost.id,
+          title: newPost.title,
+          excerpt: newPost.excerpt
+        });
+        
+        if (emailResult.success) {
+          console.log(`Email notifications sent to ${emailResult.sentCount} subscribers`);
+        } else {
+          console.warn('Some email notifications failed:', emailResult.errors);
+        }
+      } catch (emailError) {
+        console.error('Failed to send email notifications:', emailError);
+        // Don't throw here - post creation succeeded, email is secondary
+      }
       
       // Update local state
       setBlogPosts(prev => [newPost, ...prev]);

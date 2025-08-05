@@ -10,6 +10,7 @@ import PostList from './components/admin/PostList';
 import PostForm from './components/admin/PostForm';
 import ImageManager from './components/admin/ImageManager';
 import SubscriberManager from './components/admin/SubscriberManager';
+import UnsubscribePage from './components/UnsubscribePage';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/" element={<Gallery />} />
           <Route path="/post/:id" element={<BlogPost />} />
           <Route path="/login" element={<LoginForm />} />
+          <Route path="/unsubscribe" element={<UnsubscribePage />} />
           <Route path="/admin" element={
             <ProtectedRoute>
               <AdminLayout>
