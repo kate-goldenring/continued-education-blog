@@ -1,4 +1,3 @@
-import { supabase } from '../lib/supabase';
 import { emailService } from './emailService';
 
 export interface SubscriptionResult {
@@ -9,9 +8,9 @@ export interface SubscriptionResult {
 
 class SubscriptionService {
   /**
-   * Subscribe an email to the blog notifications
+   * Subscribe an email to the blog notifications using Resend
    */
-  async subscribe(email: string): Promise<SubscriptionResult> {
+  async subscribe(email: string, firstName?: string, lastName?: string): Promise<SubscriptionResult> {
     try {
       // Validate email format
       if (!this.isValidEmail(email)) {
@@ -22,24 +21,15 @@ class SubscriptionService {
         };
       }
 
-      // Attempt to insert the email
-      const { data, error } = await supabase
-        .from('email_subscribers')
-        .insert([{ email: email.toLowerCase().trim() }])
-        .select()
-        .single();
+      // Add contact to Resend audience
+      const result = await emailService.addContact(email, firstName, lastName);
 
-      if (error) {
-        // Check if it's a duplicate email error
-        if (error.code === '23505') { // PostgreSQL unique violation
-          return {
-            success: false,
-            message: 'This email is already subscribed to our newsletter.',
-            error: 'Email already exists'
-          };
-        }
-        
-        throw new Error(error.message);
+      if (!result.success) {
+        return {
+          success: false,
+          message: result.error || 'Failed to subscribe. Please try again later.',
+          error: result.error
+        };
       }
 
       return {
@@ -57,6 +47,47 @@ class SubscriptionService {
   }
 
   /**
+   * Unsubscribe using email address
+   */
+  async unsubscribe(email: string): Promise<SubscriptionResult> {
+    try {
+      // Find contact by email
+      const contactResult = await emailService.getContactByEmail(email);
+      
+      if (!contactResult.success || !contactResult.contact) {
+        return {
+          success: false,
+          message: 'Email address not found in our subscriber list.',
+          error: 'Contact not found'
+        };
+      }
+
+      // Update subscription status
+      const result = await emailService.updateContactSubscription(contactResult.contact.id, true);
+
+      if (!result.success) {
+        return {
+          success: false,
+          message: result.error || 'Failed to unsubscribe. Please try again later.',
+          error: result.error
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Successfully unsubscribed from our newsletter.'
+      };
+    } catch (error) {
+      console.error('Unsubscribe error:', error);
+      return {
+        success: false,
+        message: 'Failed to unsubscribe. Please try again later.',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Get subscription statistics (for admin use)
    */
   async getSubscriptionStats(): Promise<{
@@ -64,23 +95,7 @@ class SubscriptionService {
     activeSubscribers: number;
   }> {
     try {
-      const { data: total, error: totalError } = await supabase
-        .from('email_subscribers')
-        .select('id', { count: 'exact', head: true });
-
-      const { data: active, error: activeError } = await supabase
-        .from('email_subscribers')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_active', true);
-
-      if (totalError || activeError) {
-        throw new Error('Failed to fetch subscription stats');
-      }
-
-      return {
-        totalSubscribers: total?.length || 0,
-        activeSubscribers: active?.length || 0
-      };
+      return await emailService.getSubscriptionStats();
     } catch (error) {
       console.error('Error fetching subscription stats:', error);
       return {
@@ -98,22 +113,23 @@ class SubscriptionService {
     email: string;
     subscribedAt: string;
     isActive: boolean;
+    firstName?: string;
+    lastName?: string;
   }>> {
     try {
-      const { data, error } = await supabase
-        .from('email_subscribers')
-        .select('id, email, subscribed_at, is_active')
-        .order('subscribed_at', { ascending: false });
-
-      if (error) {
-        throw new Error(error.message);
+      const result = await emailService.getAllContacts();
+      
+      if (!result.success || !result.contacts) {
+        return [];
       }
 
-      return data.map(subscriber => ({
-        id: subscriber.id,
-        email: subscriber.email,
-        subscribedAt: subscriber.subscribed_at,
-        isActive: subscriber.is_active
+      return result.contacts.map(contact => ({
+        id: contact.id,
+        email: contact.email,
+        subscribedAt: contact.createdAt,
+        isActive: !contact.unsubscribed,
+        firstName: contact.firstName,
+        lastName: contact.lastName
       }));
     } catch (error) {
       console.error('Error fetching subscribers:', error);
@@ -130,34 +146,13 @@ class SubscriptionService {
     excerpt: string;
   }): Promise<{ success: boolean; sentCount: number; errors: string[] }> {
     try {
-      // Get all active subscribers
-      const { data: subscribers, error } = await supabase
-        .from('email_subscribers')
-        .select('id, email, unsubscribe_token')
-        .eq('is_active', true);
-
-      if (error) {
-        throw new Error(`Failed to fetch subscribers: ${error.message}`);
-      }
-
-      if (!subscribers || subscribers.length === 0) {
-        return { success: true, sentCount: 0, errors: [] };
-      }
-
-      // Send emails using Resend
-      const result = await emailService.sendPostNotification(
-        subscribers.map(sub => ({
-          id: sub.id,
-          email: sub.email,
-          unsubscribeToken: sub.unsubscribe_token
-        })),
-        {
-          postId: postData.id,
-          postTitle: postData.title,
-          postExcerpt: postData.excerpt,
-          postUrl: `/post/${postData.id}`
-        }
-      );
+      // Send broadcast email using Resend
+      const result = await emailService.sendPostNotification({
+        postId: postData.id,
+        postTitle: postData.title,
+        postExcerpt: postData.excerpt,
+        postUrl: `/post/${postData.id}`
+      });
 
       return result;
     } catch (error) {
@@ -168,6 +163,35 @@ class SubscriptionService {
         errors: [error instanceof Error ? error.message : 'Unknown error']
       };
     }
+  }
+
+  /**
+   * Export subscribers to CSV format
+   */
+  async exportSubscribers(): Promise<string> {
+    try {
+      const subscribers = await this.getAllSubscribers();
+      const activeSubscribers = subscribers.filter(sub => sub.isActive);
+      
+      const csvContent = [
+        'Email,First Name,Last Name,Subscribed Date,Status',
+        ...activeSubscribers.map(sub => 
+          `${sub.email},${sub.firstName || ''},${sub.lastName || ''},${new Date(sub.subscribedAt).toLocaleDateString()},Active`
+        )
+      ].join('\n');
+
+      return csvContent;
+    } catch (error) {
+      console.error('Error exporting subscribers:', error);
+      return 'Email,First Name,Last Name,Subscribed Date,Status\n';
+    }
+  }
+
+  /**
+   * Create audience in Resend (one-time setup)
+   */
+  async createAudience(name: string): Promise<{ success: boolean; audienceId?: string; error?: string }> {
+    return await emailService.createAudience(name);
   }
 
   /**

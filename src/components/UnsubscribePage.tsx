@@ -1,61 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Check, X, Loader, AlertCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { Check, X, Loader, AlertCircle, Mail } from 'lucide-react';
+import { subscriptionService } from '../services/subscriptionService';
 
 export default function UnsubscribePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'already_unsubscribed'>('loading');
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'form'>('form');
   const [email, setEmail] = useState<string>('');
+  const [inputEmail, setInputEmail] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const token = searchParams.get('token');
+    const emailParam = searchParams.get('email');
     
-    if (!token) {
-      setStatus('error');
-      return;
+    if (emailParam) {
+      setInputEmail(emailParam);
+      handleUnsubscribe(emailParam);
     }
-
-    handleUnsubscribe(token);
   }, [searchParams]);
 
-  const handleUnsubscribe = async (token: string) => {
+  const handleUnsubscribe = async (emailToUnsubscribe: string) => {
+    setIsSubmitting(true);
+    setStatus('loading');
+    
     try {
-      // Find subscriber by token
-      const { data: subscriber, error: findError } = await supabase
-        .from('email_subscribers')
-        .select('email, is_active')
-        .eq('unsubscribe_token', token)
-        .single();
-
-      if (findError || !subscriber) {
+      const result = await subscriptionService.unsubscribe(emailToUnsubscribe);
+      
+      setEmail(emailToUnsubscribe);
+      
+      if (result.success) {
+        setStatus('success');
+      } else {
         setStatus('error');
-        return;
       }
-
-      setEmail(subscriber.email);
-
-      if (!subscriber.is_active) {
-        setStatus('already_unsubscribed');
-        return;
-      }
-
-      // Deactivate subscription
-      const { error: updateError } = await supabase
-        .from('email_subscribers')
-        .update({ is_active: false, updated_at: new Date().toISOString() })
-        .eq('unsubscribe_token', token);
-
-      if (updateError) {
-        setStatus('error');
-        return;
-      }
-
-      setStatus('success');
     } catch (error) {
       console.error('Unsubscribe error:', error);
       setStatus('error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputEmail.trim()) {
+      handleUnsubscribe(inputEmail.trim());
     }
   };
 
@@ -65,10 +55,10 @@ export default function UnsubscribePage() {
         return <Loader className="w-16 h-16 text-blue-600 animate-spin" />;
       case 'success':
         return <Check className="w-16 h-16 text-green-600" />;
-      case 'already_unsubscribed':
-        return <Check className="w-16 h-16 text-yellow-600" />;
       case 'error':
         return <X className="w-16 h-16 text-red-600" />;
+      case 'form':
+        return <Mail className="w-16 h-16 text-blue-600" />;
     }
   };
 
@@ -84,15 +74,15 @@ export default function UnsubscribePage() {
           title: 'Successfully Unsubscribed',
           message: `You have been successfully unsubscribed from Continued Education blog notifications. We're sorry to see you go!`
         };
-      case 'already_unsubscribed':
-        return {
-          title: 'Already Unsubscribed',
-          message: 'You have already been unsubscribed from our mailing list.'
-        };
       case 'error':
         return {
           title: 'Error',
-          message: 'We encountered an error while processing your request. The unsubscribe link may be invalid or expired.'
+          message: 'We encountered an error while processing your request. Please try again or contact us if the problem persists.'
+        };
+      case 'form':
+        return {
+          title: 'Unsubscribe from Newsletter',
+          message: 'Enter your email address to unsubscribe from our blog notifications.'
         };
     }
   };
@@ -121,12 +111,46 @@ export default function UnsubscribePage() {
             <p className="text-gray-600 leading-relaxed">
               {statusInfo.message}
             </p>
-            {email && status !== 'loading' && (
+            {email && status !== 'loading' && status !== 'form' && (
               <p className="text-sm text-gray-500 mt-3">
                 Email: {email}
               </p>
             )}
           </div>
+
+          {/* Unsubscribe Form */}
+          {status === 'form' && (
+            <form onSubmit={handleFormSubmit} className="mb-6">
+              <div className="mb-4">
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="email"
+                    value={inputEmail}
+                    onChange={(e) => setInputEmail(e.target.value)}
+                    placeholder="Enter your email address"
+                    disabled={isSubmitting}
+                    required
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmitting || !inputEmail.trim()}
+                className="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader className="w-5 h-5 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Unsubscribe'
+                )}
+              </button>
+            </form>
+          )}
 
           {/* Actions */}
           <div className="space-y-3">

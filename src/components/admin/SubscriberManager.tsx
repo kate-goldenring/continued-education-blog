@@ -1,221 +1,402 @@
-import React, { useState, useEffect } from 'react';
-import { Mail, Users, TrendingUp, Download, RefreshCw, AlertCircle } from 'lucide-react';
-import { subscriptionService } from '../../services/subscriptionService';
+import { Resend } from 'resend';
 
-interface Subscriber {
+const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
+
+// Resend Audience ID - you'll need to create this in your Resend dashboard
+// Resend Audience ID - you'll need to create this in your Resend dashboard
+const AUDIENCE_ID = import.meta.env.VITE_RESEND_AUDIENCE_ID || 'your-audience-id';
+
+export interface EmailNotificationData {
+  postId: string;
+  postTitle: string;
+  postExcerpt: string;
+  postUrl: string;
+}
+
+export interface ResendContact {
   id: string;
   email: string;
-  subscribedAt: string;
-  isActive: boolean;
+  firstName?: string;
+  lastName?: string;
+  createdAt: string;
+  unsubscribed: boolean;
 }
 
-export default function SubscriberManager() {
-  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
-  const [stats, setStats] = useState({ totalSubscribers: 0, activeSubscribers: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export interface ResendAudience {
+  id: string;
+  name: string;
+}
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const [subscribersData, statsData] = await Promise.all([
-        subscriptionService.getAllSubscribers(),
-        subscriptionService.getSubscriptionStats()
-      ]);
-      
-      setSubscribers(subscribersData);
-      setStats(statsData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load subscriber data');
-    } finally {
-      setLoading(false);
+class EmailService {
+  /**
+   * Create an audience in Resend (one-time setup)
+   */
+  async createAudience(name: string): Promise<{ success: boolean; audienceId?: string; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
     }
-  };
 
-  const exportSubscribers = () => {
-    const activeSubscribers = subscribers.filter(sub => sub.isActive);
-    const csvContent = [
-      'Email,Subscribed Date,Status',
-      ...activeSubscribers.map(sub => 
-        `${sub.email},${new Date(sub.subscribedAt).toLocaleDateString()},Active`
-      )
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `blog-subscribers-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  };
-
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
-          <span className="text-gray-600">Loading subscriber data...</span>
-        </div>
-      </div>
-    );
+    try {
+      const response = await resend.audiences.create({ name });
+      return { success: true, audienceId: response.data?.id };
+    } catch (error) {
+      console.error('Failed to create audience:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to create audience' 
+      };
+    }
   }
 
-  return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900">Email Subscribers</h2>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={loadData}
-              disabled={loading}
-              className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 transition-colors duration-200"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-            <button
-              onClick={exportSubscribers}
-              disabled={stats.activeSubscribers === 0}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </button>
+  /**
+   * Add a contact to the Resend audience
+   */
+  async addContact(email: string, firstName?: string, lastName?: string): Promise<{ success: boolean; contactId?: string; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
+    }
+
+    if (!AUDIENCE_ID || AUDIENCE_ID === 'your-audience-id') {
+      return { success: false, error: 'Resend Audience ID not configured' };
+    }
+
+    try {
+      const response = await resend.contacts.create({
+        email: email.toLowerCase().trim(),
+        firstName,
+        lastName,
+        unsubscribed: false,
+        audienceId: AUDIENCE_ID
+      });
+
+      return { success: true, contactId: response.data?.id };
+    } catch (error: any) {
+      console.error('Failed to add contact:', error);
+      
+      // Handle duplicate email error
+      if (error?.message?.includes('already exists') || error?.message?.includes('duplicate')) {
+        return { success: false, error: 'This email is already subscribed to our newsletter.' };
+      }
+      
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to add contact' 
+      };
+    }
+  }
+
+  /**
+   * Remove a contact from the audience (unsubscribe)
+   */
+  async removeContact(contactId: string): Promise<{ success: boolean; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
+    }
+
+    try {
+      await resend.contacts.remove({ 
+        id: contactId,
+        audienceId: AUDIENCE_ID 
+      });
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to remove contact:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to remove contact' 
+      };
+    }
+  }
+
+  /**
+   * Update contact subscription status
+   */
+  async updateContactSubscription(contactId: string, unsubscribed: boolean): Promise<{ success: boolean; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
+    }
+
+    try {
+      await resend.contacts.update({
+        id: contactId,
+        audienceId: AUDIENCE_ID,
+        unsubscribed
+      });
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to update contact:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to update contact' 
+      };
+    }
+  }
+
+  /**
+   * Get all contacts from the audience
+   */
+  async getAllContacts(): Promise<{ success: boolean; contacts?: ResendContact[]; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
+    }
+
+    if (!AUDIENCE_ID || AUDIENCE_ID === 'your-audience-id') {
+      return { success: false, error: 'Resend Audience ID not configured' };
+    }
+
+    try {
+      const response = await resend.contacts.list({ audienceId: AUDIENCE_ID });
+      
+      const contacts: ResendContact[] = response.data?.data?.map((contact: any) => ({
+        id: contact.id,
+        email: contact.email,
+        firstName: contact.first_name,
+        lastName: contact.last_name,
+        createdAt: contact.created_at,
+        unsubscribed: contact.unsubscribed
+      })) || [];
+
+      return { success: true, contacts };
+    } catch (error) {
+      console.error('Failed to get contacts:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to get contacts' 
+      };
+    }
+  }
+
+  /**
+   * Get contact by email
+   */
+  async getContactByEmail(email: string): Promise<{ success: boolean; contact?: ResendContact; error?: string }> {
+    const result = await this.getAllContacts();
+    
+    if (!result.success || !result.contacts) {
+      return { success: false, error: result.error };
+    }
+
+    const contact = result.contacts.find(c => c.email.toLowerCase() === email.toLowerCase());
+    
+    if (!contact) {
+      return { success: false, error: 'Contact not found' };
+    }
+
+    return { success: true, contact };
+  }
+
+  /**
+   * Send new post notification to all subscribers using Resend Broadcast
+   */
+  async sendPostNotification(postData: EmailNotificationData): Promise<{ success: boolean; sentCount: number; errors: string[] }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      console.warn('Resend API key not configured. Email notifications disabled.');
+      return { success: false, sentCount: 0, errors: ['Resend API key not configured'] };
+    }
+
+    if (!AUDIENCE_ID || AUDIENCE_ID === 'your-audience-id') {
+      console.warn('Resend Audience ID not configured. Email notifications disabled.');
+      return { success: false, sentCount: 0, errors: ['Resend Audience ID not configured'] };
+    }
+
+    try {
+      // Send broadcast email to the entire audience
+      const response = await resend.broadcasts.send({
+        from: 'Continued Education <noreply@yourdomain.com>', // Update with your verified domain
+        subject: `New Post: ${postData.postTitle}`,
+        html: this.generateEmailTemplate(postData),
+        audienceId: AUDIENCE_ID
+      });
+
+      console.log('Broadcast email sent successfully:', response.data?.id);
+      
+      // Get subscriber count for reporting
+      const contactsResult = await this.getAllContacts();
+      const activeSubscribers = contactsResult.contacts?.filter(c => !c.unsubscribed).length || 0;
+
+      return {
+        success: true,
+        sentCount: activeSubscribers,
+        errors: []
+      };
+    } catch (error) {
+      console.error('Failed to send broadcast email:', error);
+      return {
+        success: false,
+        sentCount: 0,
+        errors: [error instanceof Error ? error.message : 'Failed to send broadcast email']
+      };
+    }
+  }
+
+  /**
+   * Generate HTML email template
+   */
+  private generateEmailTemplate(postData: EmailNotificationData): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Post: ${postData.postTitle}</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background-color: #f8f9fa;
+          }
+          .container {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+          }
+          .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: bold;
+          }
+          .header p {
+            margin: 0;
+            opacity: 0.9;
+          }
+          .content { 
+            padding: 30px; 
+          }
+          .content h2 {
+            color: #333;
+            font-size: 24px;
+            margin: 0 0 15px 0;
+            line-height: 1.3;
+          }
+          .content p {
+            color: #666;
+            font-size: 16px;
+            margin: 0 0 25px 0;
+          }
+          .button { 
+            display: inline-block; 
+            background: #667eea; 
+            color: white; 
+            padding: 15px 30px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            font-size: 16px;
+            transition: background-color 0.3s;
+          }
+          .button:hover {
+            background: #5a6fd8;
+          }
+          .footer { 
+            text-align: center; 
+            color: #999; 
+            font-size: 14px; 
+            border-top: 1px solid #eee; 
+            padding: 20px 30px; 
+            background: #f8f9fa;
+          }
+          .unsubscribe { 
+            color: #999; 
+            font-size: 12px; 
+            margin-top: 15px;
+          }
+          .unsubscribe a {
+            color: #667eea;
+            text-decoration: none;
+          }
+          .unsubscribe a:hover {
+            text-decoration: underline;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Continued Education</h1>
+            <p>New adventure published!</p>
+          </div>
+          
+          <div class="content">
+            <h2>${postData.postTitle}</h2>
+            <p>${postData.postExcerpt}</p>
+            <a href="${window.location.origin}${postData.postUrl}" class="button">Read Full Post</a>
+          </div>
+          
+          <div class="footer">
+            <p>Thank you for subscribing to Continued Education!</p>
+            <p>You're receiving this because you subscribed to our blog updates.</p>
+            <div class="unsubscribe">
+              Don't want to receive these emails? 
+              <a href="{{unsubscribe}}">Unsubscribe here</a>
+            </div>
           </div>
         </div>
-        
-        {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start">
-            <AlertCircle className="w-5 h-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-red-700 text-sm font-medium">{error}</p>
-              <button
-                onClick={loadData}
-                className="mt-1 text-red-600 hover:text-red-800 text-sm font-medium"
-              >
-                Try again
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+      </body>
+      </html>
+    `;
+  }
 
-      {/* Stats Cards */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-blue-600">Active Subscribers</p>
-                <p className="text-2xl font-bold text-blue-900">{stats.activeSubscribers}</p>
-              </div>
-            </div>
-          </div>
+  /**
+   * Test email configuration
+   */
+  async testEmailConfiguration(): Promise<{ success: boolean; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
+    }
 
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Mail className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-green-600">Total Signups</p>
-                <p className="text-2xl font-bold text-green-900">{stats.totalSubscribers}</p>
-              </div>
-            </div>
-          </div>
+    try {
+      await resend.emails.send({
+        from: 'Continued Education <noreply@yourdomain.com>', // Update with your domain
+        to: 'test@example.com',
+        subject: 'Test Email Configuration',
+        html: '<p>This is a test email to verify Resend configuration.</p>'
+      });
+      
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
 
-          <div className="bg-purple-50 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-purple-600">Retention Rate</p>
-                <p className="text-2xl font-bold text-purple-900">
-                  {stats.totalSubscribers > 0 
-                    ? Math.round((stats.activeSubscribers / stats.totalSubscribers) * 100)
-                    : 0}%
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+  /**
+   * Get subscription statistics
+   */
+  async getSubscriptionStats(): Promise<{
+    totalSubscribers: number;
+    activeSubscribers: number;
+  }> {
+    const result = await this.getAllContacts();
+    
+    if (!result.success || !result.contacts) {
+      return {
+        totalSubscribers: 0,
+        activeSubscribers: 0
+      };
+    }
 
-      {/* Subscribers List */}
-      <div className="p-6">
-        {subscribers.length === 0 ? (
-          <div className="text-center py-8">
-            <Mail className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">No subscribers yet</p>
-            <p className="text-gray-400 text-sm">
-              Subscribers will appear here when people sign up for your newsletter.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Subscribed Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {subscribers.map((subscriber) => (
-                  <tr key={subscriber.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Mail className="w-4 h-4 text-gray-400 mr-3" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {subscriber.email}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(subscriber.subscribedAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        subscriber.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {subscriber.isActive ? 'Active' : 'Unsubscribed'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    const totalSubscribers = result.contacts.length;
+    const activeSubscribers = result.contacts.filter(c => !c.unsubscribed).length;
+
+    return {
+      totalSubscribers,
+      activeSubscribers
+    };
+  }
 }
+
+export const emailService = new EmailService();
