@@ -9,6 +9,7 @@ import AdminLayout from './components/admin/AdminLayout';
 import PostList from './components/admin/PostList';
 import PostForm from './components/admin/PostForm';
 import ImageManager from './components/admin/ImageManager';
+import SubscriberManager from './components/admin/SubscriberManager';
 
 function App() {
   return (
@@ -43,6 +44,13 @@ function App() {
             <ProtectedRoute>
               <AdminLayout>
                 <ImageManager />
+              </AdminLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/admin/subscribers" element={
+            <ProtectedRoute>
+              <AdminLayout>
+                <SubscriberManager />
               </AdminLayout>
             </ProtectedRoute>
           } />

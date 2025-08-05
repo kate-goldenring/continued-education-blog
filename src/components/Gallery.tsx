@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Settings, AlertCircle, RefreshCw, Database } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
 import { Category } from '../types/BlogPost';
+import SubscribeForm from './SubscribeForm';
 import FilterBar from './FilterBar';
 import PhotoCard from './PhotoCard';
 
@@ -56,6 +57,11 @@ export default function Gallery() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Subscribe Section */}
+        <div className="mb-12">
+          <SubscribeForm variant="inline" />
+        </div>
+
         {/* Supabase Setup Error */}
         {isSupabaseError && (
           <div className="mb-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">

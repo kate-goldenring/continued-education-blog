@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, ChevronLeft, ChevronRight, X, Camera } from 'lucide-react';
 import { useBlogPosts } from '../hooks/useBlogPosts';
 import { useImageMetadata, useImageMetadataMap } from '../hooks/useImageMetadata';
+import SubscribeForm from './SubscribeForm';
 import { isFlickrImageUrl } from '../utils/flickrUtils';
 
 export default function BlogPost() {
@@ -241,6 +242,11 @@ export default function BlogPost() {
 
         {/* Back to Gallery */}
         <div className="mt-16 pt-8 border-t border-gray-200">
+          {/* Subscribe Form */}
+          <div className="mb-8">
+            <SubscribeForm variant="card" />
+          </div>
+          
           <button
             onClick={() => navigate('/')}
             className="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200"
