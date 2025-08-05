@@ -1,138 +1,410 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Plus, List, ArrowLeft, LogOut, User, Image as ImageIcon } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { Resend } from 'resend';
 
-interface AdminLayoutProps {
-  children: React.ReactNode;
+const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
+
+// Resend Audience ID - you'll need to create this in your Resend dashboard
+// Resend Audience ID - you'll need to create this in your Resend dashboard
+// Resend Audience ID - you'll need to create this in your Resend dashboard
+// Resend Audience ID - you'll need to create this in your Resend dashboard
+// Resend Audience ID - you'll need to create this in your Resend dashboard
+// Resend Audience ID - you'll need to create this in your Resend dashboard
+const AUDIENCE_ID = import.meta.env.VITE_RESEND_AUDIENCE_ID || 'your-audience-id';
+
+export interface EmailNotificationData {
+  postId: string;
+  postTitle: string;
+  postExcerpt: string;
+  postUrl: string;
 }
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
-  const location = useLocation();
-  const { logout, user } = useAuth();
+export interface ResendContact {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  createdAt: string;
+  unsubscribed: boolean;
+}
 
-  const isActive = (path: string) => location.pathname === path;
+export interface ResendAudience {
+  id: string;
+  name: string;
+}
 
-  const handleLogout = () => {
-    logout();
-  };
-
-  const getUserDisplayName = () => {
-    if (user?.user_metadata?.username) {
-      return user.user_metadata.username;
+class EmailService {
+  /**
+   * Create an audience in Resend (one-time setup)
+   */
+  async createAudience(name: string): Promise<{ success: boolean; audienceId?: string; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
     }
-    if (user?.user_metadata?.full_name) {
-      return user.user_metadata.full_name;
-    }
-    return user?.email?.split('@')[0] || 'User';
-  };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Admin Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">Continued Education Admin</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              {/* User Info */}
-              {user && (
-                <div className="flex items-center text-sm text-gray-600">
-                  <User className="w-4 h-4 mr-2" />
-                  <span>Welcome, {getUserDisplayName()}</span>
-                </div>
-              )}
-              
-              <Link
-                to="/"
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors duration-200"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Blog
-              </Link>
-              <button
-                onClick={handleLogout}
-                className="inline-flex items-center px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-md hover:bg-red-50 transition-colors duration-200"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </button>
-            </div>
+    try {
+      const response = await resend.audiences.create({ name });
+      return { success: true, audienceId: response.data?.id };
+    } catch (error) {
+      console.error('Failed to create audience:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to create audience' 
+      };
+    }
+  }
+
+  /**
+   * Add a contact to the Resend audience
+   */
+  async addContact(email: string, firstName?: string, lastName?: string): Promise<{ success: boolean; contactId?: string; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
+    }
+
+    if (!AUDIENCE_ID || AUDIENCE_ID === 'your-audience-id') {
+      return { success: false, error: 'Resend Audience ID not configured' };
+    }
+
+    try {
+      const response = await resend.contacts.create({
+        email: email.toLowerCase().trim(),
+        firstName,
+        lastName,
+        unsubscribed: false,
+        audienceId: AUDIENCE_ID
+      });
+
+      return { success: true, contactId: response.data?.id };
+    } catch (error: any) {
+      console.error('Failed to add contact:', error);
+      
+      // Handle duplicate email error
+      if (error?.message?.includes('already exists') || error?.message?.includes('duplicate')) {
+        return { success: false, error: 'This email is already subscribed to our newsletter.' };
+      }
+      
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to add contact' 
+      };
+    }
+  }
+
+  /**
+   * Remove a contact from the audience (unsubscribe)
+   */
+  async removeContact(contactId: string): Promise<{ success: boolean; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
+    }
+
+    try {
+      await resend.contacts.remove({ 
+        id: contactId,
+        audienceId: AUDIENCE_ID 
+      });
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to remove contact:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to remove contact' 
+      };
+    }
+  }
+
+  /**
+   * Update contact subscription status
+   */
+  async updateContactSubscription(contactId: string, unsubscribed: boolean): Promise<{ success: boolean; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
+    }
+
+    try {
+      await resend.contacts.update({
+        id: contactId,
+        audienceId: AUDIENCE_ID,
+        unsubscribed
+      });
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to update contact:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to update contact' 
+      };
+    }
+  }
+
+  /**
+   * Get all contacts from the audience
+   */
+  async getAllContacts(): Promise<{ success: boolean; contacts?: ResendContact[]; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
+    }
+
+    if (!AUDIENCE_ID || AUDIENCE_ID === 'your-audience-id') {
+      return { success: false, error: 'Resend Audience ID not configured' };
+    }
+
+    try {
+      const response = await resend.contacts.list({ audienceId: AUDIENCE_ID });
+      
+      const contacts: ResendContact[] = response.data?.data?.map((contact: any) => ({
+        id: contact.id,
+        email: contact.email,
+        firstName: contact.first_name,
+        lastName: contact.last_name,
+        createdAt: contact.created_at,
+        unsubscribed: contact.unsubscribed
+      })) || [];
+
+      return { success: true, contacts };
+    } catch (error) {
+      console.error('Failed to get contacts:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to get contacts' 
+      };
+    }
+  }
+
+  /**
+   * Get contact by email
+   */
+  async getContactByEmail(email: string): Promise<{ success: boolean; contact?: ResendContact; error?: string }> {
+    const result = await this.getAllContacts();
+    
+    if (!result.success || !result.contacts) {
+      return { success: false, error: result.error };
+    }
+
+    const contact = result.contacts.find(c => c.email.toLowerCase() === email.toLowerCase());
+    
+    if (!contact) {
+      return { success: false, error: 'Contact not found' };
+    }
+
+    return { success: true, contact };
+  }
+
+  /**
+   * Send new post notification to all subscribers using Resend Broadcast
+   */
+  async sendPostNotification(postData: EmailNotificationData): Promise<{ success: boolean; sentCount: number; errors: string[] }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      console.warn('Resend API key not configured. Email notifications disabled.');
+      return { success: false, sentCount: 0, errors: ['Resend API key not configured'] };
+    }
+
+    if (!AUDIENCE_ID || AUDIENCE_ID === 'your-audience-id') {
+      console.warn('Resend Audience ID not configured. Email notifications disabled.');
+      return { success: false, sentCount: 0, errors: ['Resend Audience ID not configured'] };
+    }
+
+    try {
+      // Send broadcast email to the entire audience
+      const response = await resend.broadcasts.send({
+        from: 'Continued Education <noreply@yourdomain.com>', // Update with your verified domain
+        subject: `New Post: ${postData.postTitle}`,
+        html: this.generateEmailTemplate(postData),
+        audienceId: AUDIENCE_ID,
+        headers: {
+          'List-Unsubscribe': `<${window.location.origin}/unsubscribe>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+        }
+      });
+
+      console.log('Broadcast email sent successfully:', response.data?.id);
+      
+      // Get subscriber count for reporting
+      const contactsResult = await this.getAllContacts();
+      const activeSubscribers = contactsResult.contacts?.filter(c => !c.unsubscribed).length || 0;
+
+      return {
+        success: true,
+        sentCount: activeSubscribers,
+        errors: []
+      };
+    } catch (error) {
+      console.error('Failed to send broadcast email:', error);
+      return {
+        success: false,
+        sentCount: 0,
+        errors: [error instanceof Error ? error.message : 'Failed to send broadcast email']
+      };
+    }
+  }
+
+  /**
+   * Generate HTML email template
+   */
+  private generateEmailTemplate(postData: EmailNotificationData): string {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Post: ${postData.postTitle}</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            max-width: 600px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background-color: #f8f9fa;
+          }
+          .container {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+          }
+          .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: bold;
+          }
+          .header p {
+            margin: 0;
+            opacity: 0.9;
+          }
+          .content { 
+            padding: 30px; 
+          }
+          .content h2 {
+            color: #333;
+            font-size: 24px;
+            margin: 0 0 15px 0;
+            line-height: 1.3;
+          }
+          .content p {
+            color: #666;
+            font-size: 16px;
+            margin: 0 0 25px 0;
+          }
+          .button { 
+            display: inline-block; 
+            background: #667eea; 
+            color: white; 
+            padding: 15px 30px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            font-weight: bold; 
+            font-size: 16px;
+            transition: background-color 0.3s;
+          }
+          .button:hover {
+            background: #5a6fd8;
+          }
+          .footer { 
+            text-align: center; 
+            color: #999; 
+            font-size: 14px; 
+            border-top: 1px solid #eee; 
+            padding: 20px 30px; 
+            background: #f8f9fa;
+          }
+          .unsubscribe { 
+            color: #999; 
+            font-size: 12px; 
+            margin-top: 15px;
+          }
+          .unsubscribe a {
+            color: #667eea;
+            text-decoration: none;
+          }
+          .unsubscribe a:hover {
+            text-decoration: underline;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Continued Education</h1>
+            <p>New adventure published!</p>
+          </div>
+          
+          <div class="content">
+            <h2>${postData.postTitle}</h2>
+            <p>${postData.postExcerpt}</p>
+            <a href="${window.location.origin}${postData.postUrl}" class="button">Read Full Post</a>
+          </div>
+          
+          <div class="footer">
+            <p>Thank you for subscribing to Continued Education!</p>
+            <p>You're receiving this because you subscribed to our blog updates.</p>
           </div>
         </div>
-      </header>
+      </body>
+      </html>
+    `;
+  }
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Navigation */}
-          <nav className="lg:w-64 flex-shrink-0">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Navigation</h2>
-              <ul className="space-y-2">
-                <li>
-                  <Link
-                    to="/admin"
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                      isActive('/admin')
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <List className="w-4 h-4 mr-3" />
-                    All Posts
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/admin/new"
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                      isActive('/admin/new')
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Plus className="w-4 h-4 mr-3" />
-                    New Post
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/admin/images"
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                      isActive('/admin/images')
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <ImageIcon className="w-4 h-4 mr-3" />
-                    Image Gallery
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    to="/admin/subscribers"
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
-                      isActive('/admin/subscribers')
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <Mail className="w-4 h-4 mr-3" />
-                    Subscribers
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </nav>
+  /**
+   * Test email configuration
+   */
+  async testEmailConfiguration(): Promise<{ success: boolean; error?: string }> {
+    if (!import.meta.env.VITE_RESEND_API_KEY) {
+      return { success: false, error: 'Resend API key not configured' };
+    }
 
-          {/* Main Content */}
-          <main className="flex-1">
-            {children}
-          </main>
-        </div>
-      </div>
-    </div>
-  );
+    try {
+      await resend.emails.send({
+        from: 'Continued Education <noreply@yourdomain.com>', // Update with your domain
+        to: 'test@example.com',
+        subject: 'Test Email Configuration',
+        html: '<p>This is a test email to verify Resend configuration.</p>',
+        headers: {
+          'List-Unsubscribe': `<${window.location.origin}/unsubscribe>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+        }
+      });
+      
+      return { success: true };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  /**
+   * Get subscription statistics
+   */
+  async getSubscriptionStats(): Promise<{
+    totalSubscribers: number;
+    activeSubscribers: number;
+  }> {
+    const result = await this.getAllContacts();
+    
+    if (!result.success || !result.contacts) {
+      return {
+        totalSubscribers: 0,
+        activeSubscribers: 0
+      };
+    }
+
+    const totalSubscribers = result.contacts.length;
+    const activeSubscribers = result.contacts.filter(c => !c.unsubscribed).length;
+
+    return {
+      totalSubscribers,
+      activeSubscribers
+    };
+  }
 }
+
+export const emailService = new EmailService();

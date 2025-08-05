@@ -7,6 +7,7 @@ const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY);
 // Resend Audience ID - you'll need to create this in your Resend dashboard
 // Resend Audience ID - you'll need to create this in your Resend dashboard
 // Resend Audience ID - you'll need to create this in your Resend dashboard
+// Resend Audience ID - you'll need to create this in your Resend dashboard
 const AUDIENCE_ID = import.meta.env.VITE_RESEND_AUDIENCE_ID || 'your-audience-id';
 
 export interface EmailNotificationData {
@@ -210,7 +211,7 @@ class EmailService {
         html: this.generateEmailTemplate(postData),
         audienceId: AUDIENCE_ID,
         headers: {
-          'List-Unsubscribe': '<https://resend.com/unsubscribe>',
+          'List-Unsubscribe': `<${window.location.origin}/unsubscribe>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
         }
       });
@@ -366,7 +367,7 @@ class EmailService {
         subject: 'Test Email Configuration',
         html: '<p>This is a test email to verify Resend configuration.</p>',
         headers: {
-          'List-Unsubscribe': '<https://resend.com/unsubscribe>',
+          'List-Unsubscribe': `<${window.location.origin}/unsubscribe>`,
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
         }
       });
